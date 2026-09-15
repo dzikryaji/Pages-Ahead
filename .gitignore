@@ -1,0 +1,11 @@
+# Local agent planning and generated context
+.agent/
+.agents/
+
+# Generated visual review artifacts
+screenshots/
+symbols/
+
+# Local macOS and Xcode user state
+.DS_Store
+xcuserdata/

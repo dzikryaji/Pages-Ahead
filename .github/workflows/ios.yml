@@ -1,0 +1,32 @@
+name: iOS CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: macos-26
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode 26.5
+        run: sudo xcode-select --switch /Applications/Xcode_26.5.app
+
+      - name: Build and test
+        run: >-
+          xcodebuild test
+          -project 'Pages Ahead.xcodeproj'
+          -scheme 'Pages Ahead'
+          -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.5'
+          -resultBundlePath TestResults.xcresult
+          CODE_SIGNING_ALLOWED=NO
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TestResults
+          path: TestResults.xcresult
