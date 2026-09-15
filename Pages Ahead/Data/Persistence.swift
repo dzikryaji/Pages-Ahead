@@ -88,6 +88,8 @@ final class StoredReadingRecord {
 
 @Model
 final class StoredPlannedSession {
+    private static let unassignedBookID = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
+
     @Attribute(.unique) var id: UUID
     var start: Date
     var durationMinutes: Int
@@ -99,14 +101,14 @@ final class StoredPlannedSession {
 
     init(session: PlannedSession) {
         id = session.id; start = session.start; durationMinutes = session.durationMinutes
-        place = session.place; bookID = session.bookID; reminderEnabled = session.reminderEnabled
+        place = session.place; bookID = session.bookID ?? Self.unassignedBookID; reminderEnabled = session.reminderEnabled
         calendarEnabled = session.calendarEnabled
         calendarEventID = session.calendarEventID
     }
-    var domain: PlannedSession { PlannedSession(id: id, start: start, durationMinutes: durationMinutes, place: place, bookID: bookID, reminderEnabled: reminderEnabled, calendarEnabled: calendarEnabled, calendarEventID: calendarEventID) }
+    var domain: PlannedSession { PlannedSession(id: id, start: start, durationMinutes: durationMinutes, place: place, bookID: bookID == Self.unassignedBookID ? nil : bookID, reminderEnabled: reminderEnabled, calendarEnabled: calendarEnabled, calendarEventID: calendarEventID) }
     func update(from session: PlannedSession) {
         start = session.start; durationMinutes = session.durationMinutes; place = session.place
-        bookID = session.bookID; reminderEnabled = session.reminderEnabled; calendarEnabled = session.calendarEnabled
+        bookID = session.bookID ?? Self.unassignedBookID; reminderEnabled = session.reminderEnabled; calendarEnabled = session.calendarEnabled
         calendarEventID = session.calendarEventID
     }
 }

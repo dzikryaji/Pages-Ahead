@@ -1,6 +1,62 @@
 import SwiftUI
 import TipKit
 
+private struct ReadingLaunch: Identifiable {
+    let id = UUID()
+    let session: PlannedSession
+    let book: Book
+}
+
+private struct StartReadingBookPicker: View {
+    let books: [Book]
+    let onStart: (Book) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedID: Book.ID?
+
+    init(books: [Book], initiallySelected: Book?, onStart: @escaping (Book) -> Void) {
+        self.books = books
+        self.onStart = onStart
+        _selectedID = State(initialValue: initiallySelected?.id)
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                List(books) { book in
+                    Button { selectedID = book.id } label: {
+                        HStack {
+                            BookRow(book: book)
+                            Spacer()
+                            Image(systemName: selectedID == book.id ? "checkmark.circle.fill" : "circle")
+                                .font(.system(size: 22))
+                                .foregroundStyle(selectedID == book.id ? AppTheme.ink : AppTheme.tertiaryText)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(selectedID == book.id ? .isSelected : [])
+                }
+                Divider()
+                Button("Start Reading") {
+                    guard let book = books.first(where: { $0.id == selectedID }) else { return }
+                    dismiss()
+                    onStart(book)
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(selectedID == nil)
+                .padding(.horizontal)
+                .padding(.vertical, 12)
+            }
+            .navigationTitle("Choose what to read")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
 struct ForecastHomeView: View {
     @Bindable var viewModel: ForecastViewModel
     let activityRepository: ActivityRepository
@@ -12,8 +68,11 @@ struct ForecastHomeView: View {
     let personalization: PersonalizationRepository
     var onReplayOnboarding: () -> Void = {}
     var loadsOnAppear = true
+    var startPlannedSessionOnAppear = false
     @State private var showingSettings = false
-    @State private var activePlannedSession: PlannedSession?
+    @State private var sessionAwaitingBook: PlannedSession?
+    @State private var activeLaunch: ReadingLaunch?
+    @State private var handledInitialStart = false
 
     var body: some View {
         NavigationStack {
@@ -40,31 +99,31 @@ struct ForecastHomeView: View {
                             description: "Choose a book in Library to create reading windows."
                         )
                     }
-                    if let window = viewModel.windows.first, let book = viewModel.book(id: window.bookID) {
-                        NavigationLink(value: window) { HeroWindowCard(window: window, book: book) }.buttonStyle(.plain)
+                    if let window = viewModel.windows.first {
+                        NavigationLink(value: window) { HeroWindowCard(window: window) }.buttonStyle(.plain)
                         Button("Plan Reading") {
                             viewModel.editingSession = nil
                             viewModel.planningWindow = window
                             viewModel.showingPlanner = true
                         }.buttonStyle(PrimaryButtonStyle())
                         Label(
-                            "Chosen from your book, schedule, preferences, and local weather.",
+                            "Chosen from your schedule, preferences, and local weather.",
                             systemImage: "slider.horizontal.3"
                         )
                             .font(AppTypography.caption)
                             .foregroundStyle(AppTheme.secondaryText)
                     }
-                    if let session = viewModel.plannedSession, let book = viewModel.book(id: session.bookID) {
+                    if let session = viewModel.plannedSession {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("PLANNED").font(AppTypography.displayEyebrow).tracking(0.8).foregroundStyle(AppTheme.ink)
                             HStack {
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text(session.start, format: .dateTime.weekday().hour().minute()).font(.headline)
-                                    Text("\(book.title) · \(session.durationMinutes) min").font(AppTypography.subheadline).foregroundStyle(AppTheme.secondaryText)
+                                    Text("Flexible reading window").font(AppTypography.subheadline).foregroundStyle(AppTheme.secondaryText)
                                 }
                                 Spacer()
                                 Button("Start") {
-                                    activePlannedSession = session
+                                    sessionAwaitingBook = session
                                 }
                                 .buttonStyle(.borderedProminent)
                                 Menu {
@@ -99,8 +158,12 @@ struct ForecastHomeView: View {
             }
             .appBackground(enabled: !viewModel.isLoading)
             .task {
-                guard loadsOnAppear else { return }
-                await viewModel.reload()
+                if loadsOnAppear { await viewModel.reload() }
+                if startPlannedSessionOnAppear, !handledInitialStart,
+                   let session = viewModel.plannedSession {
+                    handledInitialStart = true
+                    sessionAwaitingBook = session
+                }
             }
             .navigationTitle("Pages Ahead")
             .toolbar {
@@ -111,7 +174,7 @@ struct ForecastHomeView: View {
                 }
             }
             .navigationDestination(for: ReadingWindow.self) { window in
-                if let book = viewModel.book(id: window.bookID) {
+                if let book = viewModel.recommendedBook {
                     ForecastDetailView(window: window, book: book, allBooks: viewModel.books,
                         plan: {
                             viewModel.editingSession = nil
@@ -124,12 +187,16 @@ struct ForecastHomeView: View {
             }
             .sheet(isPresented: $viewModel.showingPlanner) {
                 if let window = viewModel.planningWindow ?? viewModel.windows.first,
-                   let book = viewModel.book(id: window.bookID) ?? viewModel.recommendedBook {
+                   let book = viewModel.recommendedBook {
                     PlanSessionView(window: window, book: book, existingSession: viewModel.editingSession,
                                     defaultReminder: settings.preferences.remindersEnabled,
+                                    requestsPermissionForFirstPlan: !settings.hasCreatedReadingPlan,
                                     reminderLeadMinutes: settings.preferences.reminderLeadTime,
                                     notifications: notifications, calendarWriter: calendarWriter,
-                                    onPlan: viewModel.plan, onNotice: { viewModel.notice = $0 })
+                                    onPlan: { session in
+                                        settings.hasCreatedReadingPlan = true
+                                        viewModel.plan(session)
+                                    }, onNotice: { viewModel.notice = $0 })
                 }
             }
             .sheet(isPresented: $showingSettings) {
@@ -141,14 +208,23 @@ struct ForecastHomeView: View {
                     )
                 }
             }
-            .fullScreenCover(item: $activePlannedSession) { session in
-                if let book = viewModel.book(id: session.bookID) {
+            .sheet(item: $sessionAwaitingBook) { session in
+                StartReadingBookPicker(
+                    books: viewModel.books,
+                    initiallySelected: lastReadBook
+                ) { book in
+                    activeLaunch = ReadingLaunch(session: session, book: book)
+                }
+            }
+            .fullScreenCover(item: $activeLaunch) { launch in
+                let session = launch.session
+                let book = launch.book
                     let matchingWindow = viewModel.windows.first {
                         $0.start == session.start
                     }
                     ReadingSessionView(
                         book: book,
-                        durationMinutes: session.durationMinutes,
+                        durationMinutes: settings.preferences.duration,
                         repository: activityRepository,
                         personalization: viewModel.personalizationRepository,
                         progressStore: sessionProgress,
@@ -162,12 +238,16 @@ struct ForecastHomeView: View {
                             viewModel.complete(session)
                         }
                     )
-                }
             }
             .alert("Action needed", isPresented: Binding(get: { viewModel.notice != nil }, set: { if !$0 { viewModel.notice = nil } })) {
                 Button("OK", role: .cancel) { viewModel.notice = nil }
             } message: { Text(viewModel.notice ?? "") }
         }
+    }
+
+    private var lastReadBook: Book? {
+        let lastBookID = activityRepository.records().max(by: { $0.date < $1.date })?.bookID
+        return viewModel.book(id: lastBookID)
     }
 
     private func cancel(_ session: PlannedSession) async {
@@ -182,7 +262,6 @@ struct ForecastHomeView: View {
 
 private struct HeroWindowCard: View {
     let window: ReadingWindow
-    let book: Book
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack {
@@ -200,8 +279,8 @@ private struct HeroWindowCard: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 5) {
                     Text(window.start.readingDay).font(.title3.weight(.medium))
-                    Text(window.start.readingTime).font(.system(size: 40, weight: .bold, design: .rounded))
-                    Text("\(window.durationMinutes) minutes · \(window.place)").font(.subheadline)
+                    Text(window.readingTimeRange).font(.system(size: 34, weight: .bold, design: .rounded))
+                    Text("Flexible window").font(.subheadline)
                 }
                 Spacer()
                 VStack(spacing: 5) {
@@ -210,14 +289,9 @@ private struct HeroWindowCard: View {
                     Text(window.condition).font(.caption)
                 }
             }
-            HStack(spacing: 12) {
-                BookCover(book: book, width: 44)
-                VStack(alignment: .leading, spacing: 2) { Text("Continue reading").font(.caption); Text(book.title).font(.headline).lineLimit(2) }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.secondary)
-            }
+            Text(window.fitReason)
+                .font(AppTypography.subheadline)
+                .foregroundStyle(AppTheme.secondaryText)
         }
         .foregroundStyle(AppTheme.ink)
         .padding(.vertical, 20)
@@ -244,7 +318,7 @@ private struct UpcomingWindowRow: View {
                 .frame(width: 38)
             VStack(alignment: .leading, spacing: 3) {
                 Text(window.start.readingDay).font(.headline)
-                Text("\(window.start.readingTime) · \(window.durationMinutes) min").font(AppTypography.subheadline).foregroundStyle(AppTheme.secondaryText)
+                Text(window.readingTimeRange).font(AppTypography.subheadline).foregroundStyle(AppTheme.secondaryText)
             }
             Spacer()
             Text("\(window.temperature)°").font(.title3.bold())
@@ -283,8 +357,8 @@ struct ForecastDetailView: View {
                 VStack(spacing: 12) {
                     AppSymbol(systemName: window.weatherSymbol, size: 58)
                         .foregroundStyle(AppTheme.ink)
-                    Text(window.start.readingTime).font(.largeTitle.bold())
-                    Text("\(window.start.readingDay) · \(window.durationMinutes) minutes").foregroundStyle(.secondary)
+                    Text(window.readingTimeRange).font(.largeTitle.bold())
+                    Text(window.start.readingDay).foregroundStyle(.secondary)
                     if window.isCached {
                         Label("Cached forecast", systemImage: "clock.arrow.circlepath")
                         .font(.caption)
@@ -354,6 +428,7 @@ struct PlanSessionView: View {
     let book: Book
     let existingSession: PlannedSession?
     let defaultReminder: Bool
+    let requestsPermissionForFirstPlan: Bool
     let reminderLeadMinutes: Int
     let notifications: NotificationScheduling
     let calendarWriter: CalendarEventWriting
@@ -368,8 +443,8 @@ struct PlanSessionView: View {
     @State private var saveError: String?
     @State private var isSaving = false
 
-    init(window: ReadingWindow, book: Book, existingSession: PlannedSession? = nil, defaultReminder: Bool, reminderLeadMinutes: Int, notifications: NotificationScheduling, calendarWriter: CalendarEventWriting, initialSaveError: String? = nil, onPlan: @escaping (PlannedSession) -> Void, onNotice: @escaping (String) -> Void) {
-        self.window = window; self.book = book; self.existingSession = existingSession; self.defaultReminder = defaultReminder; self.reminderLeadMinutes = reminderLeadMinutes; self.notifications = notifications; self.calendarWriter = calendarWriter; self.onPlan = onPlan; self.onNotice = onNotice
+    init(window: ReadingWindow, book: Book, existingSession: PlannedSession? = nil, defaultReminder: Bool, requestsPermissionForFirstPlan: Bool = false, reminderLeadMinutes: Int, notifications: NotificationScheduling, calendarWriter: CalendarEventWriting, initialSaveError: String? = nil, onPlan: @escaping (PlannedSession) -> Void, onNotice: @escaping (String) -> Void) {
+        self.window = window; self.book = book; self.existingSession = existingSession; self.defaultReminder = defaultReminder; self.requestsPermissionForFirstPlan = requestsPermissionForFirstPlan; self.reminderLeadMinutes = reminderLeadMinutes; self.notifications = notifications; self.calendarWriter = calendarWriter; self.onPlan = onPlan; self.onNotice = onNotice
         _start = State(initialValue: existingSession?.start ?? window.start)
         _duration = State(initialValue: existingSession?.durationMinutes ?? window.durationMinutes)
         _place = State(initialValue: existingSession?.place ?? window.place)
@@ -382,7 +457,7 @@ struct PlanSessionView: View {
         NavigationStack {
             Form {
                 Section("When") { DatePicker("Start", selection: $start); Stepper("\(duration) minutes", value: $duration, in: 10...120, step: 5) }
-                Section("Reading") { BookRow(book: book); Picker("Place", selection: $place) { ForEach(["Indoors", "Outdoors", "Covered patio", "Café"], id: \.self) { Text($0) } } }
+                Section("Reading") { Picker("Place", selection: $place) { ForEach(["Indoors", "Outdoors", "Covered patio", "Café"], id: \.self) { Text($0) } } }
                 Section("Optional") { Toggle("Reminder", isOn: $reminder); Toggle("Add to Calendar", isOn: $addToCalendar) }
                 if let saveError { Section { Text(saveError).foregroundStyle(.red) } }
                 Section {
@@ -402,18 +477,19 @@ struct PlanSessionView: View {
     private func save() async {
         isSaving = true; saveError = nil
         defer { isSaving = false }
-        var session = PlannedSession(id: existingSession?.id ?? UUID(), start: start, durationMinutes: duration, place: place, bookID: book.id, reminderEnabled: reminder, calendarEnabled: addToCalendar, calendarEventID: existingSession?.calendarEventID)
+        var session = PlannedSession(id: existingSession?.id ?? UUID(), start: start, durationMinutes: duration, place: place, bookID: nil, reminderEnabled: reminder, calendarEnabled: addToCalendar, calendarEventID: existingSession?.calendarEventID)
         do {
             var notices: [String] = []
-            if reminder {
-                let scheduled = try await notifications.schedule(session: session, bookTitle: book.title, leadMinutes: reminderLeadMinutes)
+            if reminder || requestsPermissionForFirstPlan {
+                let scheduled = try await notifications.schedule(session: session, bookTitle: "a book", leadMinutes: reminderLeadMinutes)
+                session.reminderEnabled = scheduled
                 if !scheduled {
                     session.reminderEnabled = false
                     notices.append("Session saved without a reminder because notification access or timing was unavailable.")
                 }
             } else { notifications.cancel(sessionID: session.id) }
             if addToCalendar {
-                do { session.calendarEventID = try await calendarWriter.save(session: session, bookTitle: book.title, existingEventID: existingSession?.calendarEventID) }
+                do { session.calendarEventID = try await calendarWriter.save(session: session, bookTitle: "a book", existingEventID: existingSession?.calendarEventID) }
                 catch where existingSession?.calendarEventID == nil {
                     session.calendarEnabled = false
                     notices.append("Session saved without a Calendar event because Calendar access was unavailable.")
@@ -439,28 +515,32 @@ struct BookAlternativesView: View {
     init(books: [Book], selected: Book, choose: @escaping (Book) -> Void) { self.books = books; self.selected = selected; self.choose = choose; _choice = State(initialValue: selected.id) }
     var body: some View {
         NavigationStack {
-            List(books) { book in
-                Button { choice = book.id } label: {
-                    HStack {
-                        BookRow(book: book)
-                        Spacer()
-                        if choice == book.id {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 22))
-                                .foregroundStyle(AppTheme.ink)
+            VStack(spacing: 0) {
+                List(books) { book in
+                    Button { choice = book.id } label: {
+                        HStack {
+                            BookRow(book: book)
+                            Spacer()
+                            if choice == book.id {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 22))
+                                    .foregroundStyle(AppTheme.ink)
+                            }
                         }
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(choice == book.id ? .isSelected : [])
                 }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(choice == book.id ? .isSelected : [])
-            }
-            .navigationTitle("Book alternatives")
-            .safeAreaInset(edge: .bottom) {
+                Divider()
                 Button("Choose Book") {
                     if let book = books.first(where: { $0.id == choice }) { choose(book) }
                     dismiss()
-                }.buttonStyle(PrimaryButtonStyle()).padding().background(.bar)
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .padding(.horizontal)
+                .padding(.vertical, 12)
             }
+            .navigationTitle("Book alternatives")
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
         }
     }
@@ -482,7 +562,7 @@ struct BookAlternativesView: View {
 }
 
 #Preview("Hero Window Card") {
-    HeroWindowCard(window: SampleData.windows(bookID: SampleData.books[0].id)[0], book: SampleData.books[0])
+    HeroWindowCard(window: SampleData.windows(bookID: SampleData.books[0].id)[0])
         .padding()
 }
 

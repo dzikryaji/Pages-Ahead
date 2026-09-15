@@ -10,46 +10,59 @@ final class PagesAheadUITests: XCTestCase {
 
     func testBookFirstOnboardingReachesMainTabs() {
         let app = launch()
-        XCTAssertTrue(app.staticTexts["Pages Ahead"].waitForExistence(timeout: 5))
-        XCTAssertTrue(
-            app.staticTexts[
-                "Pages Ahead combines the book you're reading with weather near you to suggest personalized reading windows."
-            ].exists
-        )
-        app.buttons["Set Up My Reading Plan"].tap()
+        XCTAssertTrue(app.staticTexts["Welcome to Pages Ahead"].waitForExistence(timeout: 5))
+        app.swipeLeft()
+        XCTAssertTrue(app.staticTexts["Your data stays with you"].waitForExistence(timeout: 5))
+        app.swipeRight()
+        XCTAssertTrue(app.staticTexts["Welcome to Pages Ahead"].waitForExistence(timeout: 5))
+        app.swipeLeft()
+        app.swipeLeft()
+        XCTAssertTrue(app.staticTexts["A few preferences go a long way"].waitForExistence(timeout: 5))
+        app.buttons["Continue to Setup"].tap()
+        completePreferences(in: app)
         addRequiredBook(in: app)
-        XCTAssertTrue(app.navigationBars["Location"].waitForExistence(timeout: 5))
-        app.buttons["Use Current Location"].tap()
+        completeLocation(in: app)
+        XCTAssertTrue(app.staticTexts["Your best upcoming reading time"].waitForExistence(timeout: 5))
+        app.buttons["I'll Do This Later"].tap()
+        XCTAssertTrue(app.staticTexts["Everything is all set"].waitForExistence(timeout: 5))
+        app.buttons["Get Started"].tap()
         XCTAssertTrue(app.tabBars.buttons["Reading Plan"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.tabBars.buttons["Library"].exists)
         XCTAssertTrue(app.tabBars.buttons["Activity"].exists)
     }
 
-    func testManualCityOnboarding() {
+    func testSkipIntroStartsAtSetupAndCannotReturnToIntro() {
         let app = launch()
-        app.buttons["Set Up My Reading Plan"].tap()
+        app.buttons["Skip Intro"].tap()
+        XCTAssertTrue(app.staticTexts["When do you like to read?"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Back"].exists)
+        completePreferences(in: app)
         addRequiredBook(in: app)
-        XCTAssertTrue(app.navigationBars["Location"].waitForExistence(timeout: 5))
-        let chooseCity = app.buttons["Choose a City Instead"]
-        XCTAssertTrue(chooseCity.waitForExistence(timeout: 5))
-        chooseCity.tap()
-        let city = app.textFields["City"]
-        XCTAssertTrue(city.waitForExistence(timeout: 5))
-        city.tap()
-        city.typeText("Denpasar")
-        app.buttons["Use City"].tap()
+        completeLocation(in: app)
+        app.buttons["I'll Do This Later"].tap()
+        app.buttons["Get Started"].tap()
         XCTAssertTrue(app.tabBars.buttons["Reading Plan"].waitForExistence(timeout: 5))
+    }
+
+    func testPlanThenChooseReminder() {
+        let app = launch()
+        app.buttons["Skip Intro"].tap()
+        completePreferences(in: app)
+        addRequiredBook(in: app)
+        completeLocation(in: app)
+        XCTAssertTrue(app.staticTexts["Your best upcoming reading time"].waitForExistence(timeout: 5))
+        app.buttons["Confirm This Time"].tap()
+        XCTAssertTrue(app.staticTexts["Everything is all set"].waitForExistence(timeout: 5))
     }
 
     func testLibraryShowsAddBookAndSearchResults() {
         let app = launch()
-        app.buttons["Set Up My Reading Plan"].tap()
+        app.buttons["Skip Intro"].tap()
+        completePreferences(in: app)
         addRequiredBook(in: app)
-        XCTAssertTrue(app.navigationBars["Location"].waitForExistence(timeout: 5))
-        let useLocation = app.buttons["Use Current Location"]
-        XCTAssertTrue(useLocation.waitForExistence(timeout: 5))
-        useLocation.tap()
-
+        completeLocation(in: app)
+        app.buttons["I'll Do This Later"].tap()
+        app.buttons["Get Started"].tap()
         XCTAssertTrue(app.tabBars.buttons["Reading Plan"].waitForExistence(timeout: 5))
 
         let libraryTab = app.tabBars.buttons["Library"]
@@ -60,7 +73,7 @@ final class PagesAheadUITests: XCTestCase {
         XCTAssertTrue(addBook.waitForExistence(timeout: 5))
         addBook.tap()
 
-        let search = app.textFields["book-catalog-search"]
+        let search = app.textFields["book-selection-search"]
         XCTAssertTrue(search.waitForExistence(timeout: 5))
         search.tap()
         search.typeText("Piranesi")
@@ -68,7 +81,7 @@ final class PagesAheadUITests: XCTestCase {
         XCTAssertTrue(result.waitForExistence(timeout: 5))
         result.tap()
 
-        let addButton = app.buttons["Add Piranesi"]
+        let addButton = app.buttons["Add Selected Books"]
         XCTAssertTrue(addButton.waitForExistence(timeout: 2))
         XCTAssertTrue(addButton.isEnabled)
         addButton.tap()
@@ -77,18 +90,29 @@ final class PagesAheadUITests: XCTestCase {
     }
 
     private func addRequiredBook(in app: XCUIApplication) {
-        XCTAssertTrue(app.navigationBars["Your first book"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["What are you reading?"].exists)
-        XCTAssertTrue(app.staticTexts["Personalized reading windows"].exists)
-        let search = app.textFields["onboarding-book-search"]
+        XCTAssertTrue(app.staticTexts["What book are you reading?"].waitForExistence(timeout: 5))
+        app.buttons["onboarding-add-books"].tap()
+        let search = app.textFields["book-selection-search"]
         XCTAssertTrue(search.waitForExistence(timeout: 5))
         search.tap()
         search.typeText("Left")
         let result = app.staticTexts["The Left Hand of Darkness"].firstMatch
         XCTAssertTrue(result.waitForExistence(timeout: 5))
         result.tap()
-        let continueButton = app.buttons["Continue with The Left Hand of Darkness"]
-        XCTAssertTrue(continueButton.waitForExistence(timeout: 2))
-        continueButton.tap()
+        app.buttons["Add Selected Books"].tap()
+        XCTAssertTrue(app.staticTexts["The Left Hand of Darkness"].waitForExistence(timeout: 2))
+        app.buttons["Next"].tap()
+    }
+
+    private func completePreferences(in app: XCUIApplication) {
+        XCTAssertTrue(app.staticTexts["When do you like to read?"].waitForExistence(timeout: 5))
+        app.buttons["Next"].tap()
+    }
+
+    private func completeLocation(in app: XCUIApplication) {
+        XCTAssertTrue(app.staticTexts["Enable your location"].waitForExistence(timeout: 5))
+        app.buttons["Turn On Location"].tap()
+        XCTAssertTrue(app.buttons["Next"].waitForExistence(timeout: 5))
+        app.buttons["Next"].tap()
     }
 }

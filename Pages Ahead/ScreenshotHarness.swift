@@ -24,36 +24,36 @@ struct ScreenshotScenarioView: View {
     @ViewBuilder
     var body: some View {
         switch scenario {
-        case "welcome_new":
-            WelcomeView(actionTitle: "Set Up My Reading Plan", getStarted: {})
-        case "welcome_returning":
-            WelcomeView(actionTitle: "Continue Setup", getStarted: {})
-        case "onboarding_book_idle":
-            onboardingBook(.init())
-        case "onboarding_book_keyboard":
-            onboardingBook(.init(), focus: true)
-        case "onboarding_book_loading":
-            onboardingBook(.init(query: "Left", state: .loading))
-        case "onboarding_book_error":
-            onboardingBook(.init(query: "Left", state: .failed("Book catalog is temporarily unavailable. Check your connection and try again.")))
-        case "onboarding_book_empty":
-            onboardingBook(.init(query: "Unknown title", state: .loaded([])))
-        case "onboarding_book_results":
-            onboardingBook(.init(query: "Book", state: .loaded(SampleData.books)))
-        case "onboarding_book_selected":
-            onboardingBook(.init(query: "Left", state: .loaded(SampleData.books), selected: SampleData.books[0]))
-        case "onboarding_book_refreshing":
-            onboardingBook(.init(query: "Left", state: .loaded(SampleData.books), isRefreshing: true))
-        case "location_default":
-            LocationSetupView(viewModel: appViewModel())
+        case "onboarding_welcome":
+            OnboardingIntroGroupView(viewModel: onboardingViewModel(page: .welcome))
+        case "onboarding_outcome":
+            OnboardingIntroGroupView(viewModel: onboardingViewModel(page: .outcome))
+        case "onboarding_how_it_works":
+            OnboardingIntroGroupView(viewModel: onboardingViewModel(page: .howItWorks))
+        case "onboarding_preferences":
+            OnboardingSetupGroupView(viewModel: onboardingViewModel(page: .preferences))
+        case "onboarding_recommendations":
+            OnboardingSetupGroupView(viewModel: onboardingViewModel(page: .recommendations, recommendations: true))
+        case "onboarding_reminder":
+            OnboardingSetupGroupView(viewModel: onboardingViewModel(page: .recommendations, recommendations: true, planned: true))
+        case "onboarding_complete_planned":
+            OnboardingCompletePage(viewModel: onboardingViewModel(page: .complete, recommendations: true, planned: true))
+        case "onboarding_complete_later":
+            OnboardingCompletePage(viewModel: onboardingViewModel(page: .complete))
+        case "welcome_new", "welcome_returning":
+            OnboardingIntroGroupView(viewModel: onboardingViewModel(page: .welcome))
+        case "onboarding_book_idle", "onboarding_book_keyboard", "onboarding_book_loading",
+             "onboarding_book_error", "onboarding_book_empty", "onboarding_book_results",
+             "onboarding_book_selected", "onboarding_book_refreshing":
+            OnboardingSetupGroupView(viewModel: onboardingViewModel(page: .book))
+        case "location_default", "location_manual_city":
+            OnboardingSetupGroupView(viewModel: onboardingViewModel(page: .location))
         case "location_resolving":
-            LocationSetupView(viewModel: appViewModel(resolving: true))
+            OnboardingSetupGroupView(viewModel: onboardingViewModel(page: .location, resolving: true))
         case "location_error":
-            LocationSetupView(viewModel: appViewModel(error: "Location could not be determined. Choose a city instead."))
+            OnboardingSetupGroupView(viewModel: onboardingViewModel(page: .location, error: "Location could not be determined."))
         case "location_denied":
-            LocationSetupView(viewModel: appViewModel(error: "Location access was denied.", denied: true))
-        case "location_manual_city":
-            LocationSetupView(viewModel: appViewModel(), enteringCity: true)
+            OnboardingSetupGroupView(viewModel: onboardingViewModel(page: .location, error: "Location access was denied.", denied: true))
         case "main_tabs_forecast":
             MainTabView(container: container)
         case "forecast_loading":
@@ -153,15 +153,36 @@ struct ScreenshotScenarioView: View {
         }
     }
 
-    private func onboardingBook(_ initial: CatalogSearchInitialState, focus: Bool = false) -> some View {
-        OnboardingBookSetupView(viewModel: appViewModel(), initialSearch: initial, focusSearchOnAppear: focus)
-    }
-
-    private func appViewModel(error: String? = nil, denied: Bool = false, resolving: Bool = false) -> AppViewModel {
+    private func onboardingViewModel(
+        page: OnboardingPage,
+        recommendations: Bool = false,
+        planned: Bool = false,
+        error: String? = nil,
+        denied: Bool = false,
+        resolving: Bool = false
+    ) -> AppViewModel {
         let viewModel = AppViewModel(container: container)
+        viewModel.draft.currentPage = page
+        viewModel.draft.introductionSeen = page.rawValue >= OnboardingPage.preferences.rawValue
+        viewModel.draft.selectedBooks = [SampleData.books[0]]
+        viewModel.draft.resolvedCity = "Makassar"
+        if recommendations {
+            let windows = SampleData.windows(bookID: SampleData.books[0].id)
+            viewModel.draft.recommendationCandidates = windows
+            viewModel.draft.selectedCandidateID = windows.first?.id
+            if planned, let window = windows.first {
+                viewModel.draft.plannedSession = PlannedSession(
+                    id: UUID(), start: window.start,
+                    durationMinutes: window.durationMinutes,
+                    place: window.place, bookID: window.bookID,
+                    reminderEnabled: false, calendarEnabled: false
+                )
+            }
+        }
         viewModel.locationError = error
         viewModel.isLocationPermissionDenied = denied
         viewModel.isResolvingLocation = resolving
+        viewModel.route = .onboarding(page)
         return viewModel
     }
 

@@ -4,29 +4,132 @@ import Testing
 
 @MainActor
 struct FeatureViewModelTests {
-    @Test func onboardingRequiresBookThenCompletesAfterLocation() {
+    @Test func onboardingFollowsThreeLockedGroupsAndCommitsBooksAtEnd() async {
         let container = AppContainer.uiTesting
         let viewModel = AppViewModel(container: container)
 
-        #expect(viewModel.route == .welcome)
-        viewModel.beginOnboarding()
-        #expect(viewModel.route == .bookSetup)
-
-        container.library.add(SampleData.books[0])
+        #expect(viewModel.route == .onboarding(.welcome))
+        viewModel.continueIntroduction()
+        #expect(viewModel.route == .onboarding(.outcome))
+        viewModel.continueIntroduction()
+        #expect(viewModel.route == .onboarding(.howItWorks))
+        viewModel.continueIntroduction()
+        #expect(viewModel.route == .onboarding(.preferences))
+        viewModel.finishPreferences()
+        #expect(viewModel.route == .onboarding(.book))
+        viewModel.setSelectedBooks(Array(SampleData.books.prefix(2)))
         viewModel.finishBookSetup()
-        #expect(viewModel.route == .locationSetup)
+        #expect(viewModel.route == .onboarding(.location))
 
-        viewModel.manualCity = "  Denpasar  "
-        viewModel.finishLocationSetup()
+        await viewModel.useCurrentLocation()
+        #expect(viewModel.route == .onboarding(.location))
+        await viewModel.finishLocationSetup()
+        #expect(viewModel.route == .onboarding(.recommendations))
+        #expect(!viewModel.recommendationCandidates.isEmpty)
+        viewModel.planLater()
+        #expect(viewModel.route == .onboarding(.complete))
+        #expect(!container.settings.hasCompletedOnboarding)
+
+        viewModel.completeOnboarding()
         #expect(viewModel.route == .main)
-        #expect(container.settings.city == "Denpasar")
+        #expect(container.settings.city == "Makassar")
         #expect(container.settings.hasCompletedOnboarding)
+        #expect(container.library.books().count == 2)
+        #expect(container.library.books().allSatisfy { $0.status == .saved })
+        #expect(container.settings.onboardingDraft == nil)
+    }
+
+    @Test func onboardingBackNeverCrossesACompletedGroup() {
+        let container = AppContainer.uiTesting
+        let viewModel = AppViewModel(container: container)
+
+        viewModel.skipIntroduction()
+        #expect(viewModel.route == .onboarding(.preferences))
+        viewModel.goBack()
+        #expect(viewModel.route == .onboarding(.preferences))
+        viewModel.finishPreferences()
+        #expect(viewModel.route == .onboarding(.book))
+        viewModel.goBack()
+
+        #expect(viewModel.route == .onboarding(.preferences))
+        viewModel.go(to: .howItWorks)
+        #expect(viewModel.route == .onboarding(.preferences))
+    }
+
+    @Test func onboardingResetsAfterAnInterruptedLaunch() {
+        let container = AppContainer.uiTesting
+        let first = AppViewModel(container: container)
+        first.skipIntroduction()
+        first.finishPreferences()
+
+        let resumed = AppViewModel(container: container)
+        #expect(resumed.route == .onboarding(.welcome))
+        #expect(resumed.draft.selectedBooks.isEmpty)
+    }
+
+    @Test func planningAndReminderAreContextual() async {
+        let container = AppContainer.uiTesting
+        let viewModel = AppViewModel(container: container)
+        viewModel.skipIntroduction()
+        viewModel.finishPreferences()
+        viewModel.setSelectedBooks([SampleData.books[0]])
+        viewModel.finishBookSetup()
+        await viewModel.useCurrentLocation()
+        await viewModel.finishLocationSetup()
+
+        await viewModel.confirmSelectedTime()
+        #expect(viewModel.draft.plannedSession != nil)
+        #expect(viewModel.route == .onboarding(.complete))
+        #expect(viewModel.draft.notificationOutcome == .scheduled)
+        #expect(container.sessions.current()?.reminderEnabled == true)
+        #expect(container.sessions.current()?.bookID == nil)
+        #expect(container.settings.hasCreatedReadingPlan)
+    }
+
+    @Test func planLaterRemovesOnlyProvisionalOnboardingPlan() async {
+        let container = AppContainer.uiTesting
+        let viewModel = AppViewModel(container: container)
+        viewModel.skipIntroduction()
+        viewModel.finishPreferences()
+        viewModel.setSelectedBooks([SampleData.books[0]])
+        viewModel.finishBookSetup()
+        await viewModel.useCurrentLocation()
+        await viewModel.finishLocationSetup()
+        viewModel.planSelectedTime()
+        #expect(container.sessions.current() != nil)
+
+        viewModel.planLater()
+
+        #expect(container.sessions.current() == nil)
+        #expect(viewModel.draft.notificationOutcome == .notRequested)
+    }
+
+    @Test func replayPrefillsWithoutDuplicatingBookOrPlan() async {
+        let container = AppContainer.uiTesting
+        container.library.add(SampleData.books[0])
+        let session = PlannedSession(
+            id: UUID(), start: .now.addingTimeInterval(7_200),
+            durationMinutes: 30, place: "Indoors",
+            bookID: SampleData.books[0].id, reminderEnabled: false,
+            calendarEnabled: false
+        )
+        container.sessions.save(session)
+        container.settings.hasCompletedOnboarding = true
+        let viewModel = AppViewModel(container: container)
 
         viewModel.replayOnboarding()
-        #expect(viewModel.route == .welcome)
+        #expect(viewModel.route == .onboarding(.welcome))
         #expect(!container.settings.hasCompletedOnboarding)
-        viewModel.beginOnboarding()
-        #expect(viewModel.route == .locationSetup)
+        #expect(viewModel.draft.selectedBooks.first?.id == SampleData.books[0].id)
+        #expect(viewModel.draft.plannedSession?.id == session.id)
+
+        viewModel.skipIntroduction()
+        viewModel.finishPreferences()
+        viewModel.finishBookSetup()
+        viewModel.go(to: .complete)
+        viewModel.completeOnboarding()
+        #expect(container.library.books().count == 1)
+        #expect(container.sessions.current()?.id == session.id)
     }
 
     @Test func completedSessionProgressUpdatesBook() {
@@ -153,6 +256,49 @@ struct FeatureViewModelTests {
         #expect(callsAfterMove == 2)
     }
 
+    @Test func weatherRefreshesWhenClosestCachedRangeHasEnded() async throws {
+        let suite = "WeatherExpiredWindowTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let fixedNow = Date(timeIntervalSince1970: 4_104_993_600)
+        let settings = UserDefaultsSettingsRepository(defaults: defaults)
+        settings.city = "Makassar"
+        var preferences = ReadingPreferences()
+        preferences.weekdayPreferredTime = "Anytime"
+        preferences.weekendPreferredTime = "Anytime"
+        settings.preferences = preferences
+        let cache = UserDefaultsWeatherForecastCache(defaults: defaults, key: "expiredWindow")
+        let oldHours = (18...20).map { hour in
+            ForecastCandidate(
+                date: fixedNow.addingTimeInterval(TimeInterval((-24 + hour - 18) * 3_600)),
+                temperature: 24,
+                condition: "Clear",
+                symbolName: "sun.max.fill"
+            )
+        }
+        cache.save(
+            WeatherForecastBatch(candidates: oldHours, source: .openMeteo),
+            for: "Makassar",
+            at: fixedNow.addingTimeInterval(-20 * 3_600)
+        )
+        let counter = WeatherCallCounter()
+        let repository = WeatherKitForecastRepository(
+            settings: settings,
+            location: PreviewLocationService(),
+            calendar: PreviewCalendarWriter(),
+            personalization: InMemoryPersonalizationRepository(),
+            weather: CountingWeatherProvider(counter: counter, start: fixedNow),
+            cache: cache,
+            nowProvider: { fixedNow }
+        )
+
+        let windows = try await repository.readingWindows(for: UUID())
+
+        #expect(await counter.value == 1)
+        #expect(!windows.isEmpty)
+        #expect(windows.allSatisfy { !$0.isCached })
+    }
+
     @Test func freshCatalogCacheSkipsNetwork() async throws {
         let cache = InMemoryCatalogSearchCache()
         cache.save([SampleData.books[0]], for: "d", fetchedAt: .now)
@@ -161,7 +307,7 @@ struct FeatureViewModelTests {
 
         viewModel.queryChanged(to: "D")
         await Task.yield()
-        let calls = await catalog.queries
+        let calls = catalog.queries
 
         guard case .loaded(let books) = viewModel.state else {
             Issue.record("Expected cached books")
@@ -200,7 +346,7 @@ struct FeatureViewModelTests {
             try await Task.sleep(for: .milliseconds(10))
         }
 
-        let callCount = await loader.callCount
+        let callCount = loader.callCount
         #expect(repository.books().first?.coverImageData == coverData)
         #expect(callCount == 1)
     }
@@ -211,12 +357,12 @@ struct FeatureViewModelTests {
 
         viewModel.queryChanged(to: "D")
         try await Task.sleep(for: .milliseconds(40))
-        let immediateQueries = await catalog.queries
+        let immediateQueries = catalog.queries
         viewModel.queryChanged(to: "Du")
         try await Task.sleep(for: .milliseconds(150))
-        let beforeDebounce = await catalog.queries
+        let beforeDebounce = catalog.queries
         try await Task.sleep(for: .seconds(1.25))
-        let finalQueries = await catalog.queries
+        let finalQueries = catalog.queries
 
         #expect(immediateQueries == ["D"])
         #expect(beforeDebounce == ["D"])
@@ -229,7 +375,8 @@ struct FeatureViewModelTests {
     }
 }
 
-private actor FixedBookCoverLoader: BookCoverImageLoading {
+@MainActor
+private final class FixedBookCoverLoader: BookCoverImageLoading {
     let data: Data
     private(set) var callCount = 0
 
@@ -261,18 +408,20 @@ private actor WeatherCallCounter {
 
 private struct CountingWeatherProvider: WeatherProviding {
     let counter: WeatherCallCounter
+    var start: Date = .now
 
     func hourlyForecast(at coordinate: LocationCoordinate) async throws -> WeatherForecastBatch {
         await counter.increment()
         let candidates = (1...168).map { hour in
-            ForecastCandidate(date: .now.addingTimeInterval(TimeInterval(hour * 3_600)),
+            ForecastCandidate(date: start.addingTimeInterval(TimeInterval(hour * 3_600)),
                               temperature: 25, condition: "Clear", symbolName: "sun.max.fill")
         }
         return WeatherForecastBatch(candidates: candidates, source: .openMeteo)
     }
 }
 
-private actor CatalogSpy: BookCatalogSearching {
+@MainActor
+private final class CatalogSpy: BookCatalogSearching {
     private(set) var queries: [String] = []
     let delay: Duration
 

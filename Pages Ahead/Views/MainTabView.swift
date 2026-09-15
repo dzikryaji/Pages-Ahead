@@ -3,16 +3,19 @@ import SwiftUI
 struct MainTabView: View {
     let container: AppContainer
     let onReplayOnboarding: () -> Void
+    let startPlannedSessionOnAppear: Bool
     @State private var forecastViewModel: ForecastViewModel
     @State private var libraryViewModel: LibraryViewModel
     @State private var activityViewModel: ActivityViewModel
 
     init(
         container: AppContainer,
-        onReplayOnboarding: @escaping () -> Void = {}
+        onReplayOnboarding: @escaping () -> Void = {},
+        startPlannedSessionOnAppear: Bool = false
     ) {
         self.container = container
         self.onReplayOnboarding = onReplayOnboarding
+        self.startPlannedSessionOnAppear = startPlannedSessionOnAppear
         _forecastViewModel = State(initialValue: ForecastViewModel(library: container.library, repository: container.forecast, sessions: container.sessions, personalization: container.personalization))
         _libraryViewModel = State(initialValue: LibraryViewModel(repository: container.library))
         _activityViewModel = State(initialValue: ActivityViewModel(repository: container.activity, library: container.library))
@@ -30,7 +33,8 @@ struct MainTabView: View {
                     calendarWriter: container.calendar,
                     settings: container.settings,
                     personalization: container.personalization,
-                    onReplayOnboarding: onReplayOnboarding
+                    onReplayOnboarding: onReplayOnboarding,
+                    startPlannedSessionOnAppear: startPlannedSessionOnAppear
                 )
             }
             Tab("Library", systemImage: "books.vertical.fill") {

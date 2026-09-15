@@ -16,19 +16,20 @@ struct ContentView: View {
             
             Group {
                 switch viewModel.route {
-                case .welcome:
-                    WelcomeView(
-                        actionTitle: viewModel.welcomeActionTitle,
-                        getStarted: viewModel.beginOnboarding
-                    )
-                case .bookSetup:
-                    OnboardingBookSetupView(viewModel: viewModel)
-                case .locationSetup:
-                    LocationSetupView(viewModel: viewModel)
+                case .onboarding(let page):
+                    switch page.group {
+                    case .intro:
+                        OnboardingIntroGroupView(viewModel: viewModel)
+                    case .setup:
+                        OnboardingSetupGroupView(viewModel: viewModel)
+                    case .finish:
+                        OnboardingCompletePage(viewModel: viewModel)
+                    }
                 case .main:
                     MainTabView(
                         container: viewModel.container,
-                        onReplayOnboarding: viewModel.replayOnboarding
+                        onReplayOnboarding: viewModel.replayOnboarding,
+                        startPlannedSessionOnAppear: viewModel.startReadingAfterOnboarding
                     )
                 }
             }

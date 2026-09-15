@@ -88,8 +88,13 @@ final class CoreLocationService: NSObject, LocationProviding, CLLocationManagerD
     }
 }
 
+struct CachedWeatherForecast: Sendable {
+    let savedAt: Date
+    let forecast: WeatherForecastBatch
+}
+
 protocol WeatherForecastCaching {
-    func forecast(for city: String, now: Date) -> WeatherForecastBatch?
+    func entry(for city: String) -> CachedWeatherForecast?
     func save(_ forecast: WeatherForecastBatch, for city: String, at date: Date)
 }
 
@@ -108,13 +113,11 @@ final class UserDefaultsWeatherForecastCache: WeatherForecastCaching {
         self.key = key
     }
 
-    func forecast(for city: String, now: Date = .now) -> WeatherForecastBatch? {
+    func entry(for city: String) -> CachedWeatherForecast? {
         guard let data = defaults.data(forKey: key),
               let entry = try? JSONDecoder().decode(Entry.self, from: data),
-              entry.cityKey == city.normalizedCacheKey,
-              now.timeIntervalSince(entry.savedAt) >= 0,
-              now.timeIntervalSince(entry.savedAt) < 86_400 else { return nil }
-        return entry.forecast
+              entry.cityKey == city.normalizedCacheKey else { return nil }
+        return CachedWeatherForecast(savedAt: entry.savedAt, forecast: entry.forecast)
     }
 
     func save(_ forecast: WeatherForecastBatch, for city: String, at date: Date = .now) {
@@ -130,45 +133,98 @@ struct WeatherKitForecastRepository: ForecastRepository {
     let personalization: PersonalizationRepository
     let weather: WeatherProviding
     var cache: WeatherForecastCaching = UserDefaultsWeatherForecastCache()
+    var nowProvider: @Sendable () -> Date = { .now }
 
     func readingWindows(for bookID: UUID) async throws -> [ReadingWindow] {
-        let city = settings.city
+        try await readingWindows(
+            for: bookID,
+            preferences: settings.preferences,
+            city: settings.city,
+            allowsMockFallback: true
+        )
+    }
+
+    func readingWindows(
+        for bookID: UUID,
+        preferences: ReadingPreferences,
+        city: String
+    ) async throws -> [ReadingWindow] {
+        try await readingWindows(
+            for: bookID,
+            preferences: preferences,
+            city: city,
+            allowsMockFallback: false
+        )
+    }
+
+    private func readingWindows(
+        for bookID: UUID,
+        preferences: ReadingPreferences,
+        city: String,
+        allowsMockFallback: Bool
+    ) async throws -> [ReadingWindow] {
+        let now = nowProvider()
+        let cached = cache.entry(for: city)
+        let cachedRanges = cached.map {
+            RecommendationEngine().dailyRanges(
+                $0.forecast.candidates,
+                preferences: preferences,
+                bookID: bookID,
+                events: [],
+                now: $0.savedAt
+            )
+        } ?? []
+        let cacheAge = cached.map { now.timeIntervalSince($0.savedAt) } ?? .infinity
+        let cacheAgeIsValid = cacheAge >= 0 && cacheAge < 86_400
+        let closestCachedWindowPassed = cachedRanges.first.map { $0.end <= now } ?? true
+
         let batch: WeatherForecastBatch
         let isCached: Bool
-        if let cached = cache.forecast(for: city, now: .now) {
-            batch = cached
+        if let cached, cacheAgeIsValid, !closestCachedWindowPassed {
+            batch = cached.forecast
             isCached = true
         } else {
             do {
                 let coordinate = try await location.coordinate(for: city)
                 batch = try await weather.hourlyForecast(at: coordinate)
+                cache.save(batch, for: city, at: now)
+                isCached = false
             } catch is CancellationError {
                 throw CancellationError()
-            } catch {
+            } catch let error where cached != nil {
+                guard let cached else { throw error }
+                batch = cached.forecast
+                isCached = true
+            } catch where allowsMockFallback {
                 batch = try await MockWeatherProvider().hourlyForecast(at: LocationCoordinate(latitude: 0, longitude: 0))
+                cache.save(batch, for: city, at: now)
+                isCached = false
             }
-            cache.save(batch, for: city, at: .now)
-            isCached = false
         }
 
-        let preferences = settings.preferences
         let events = preferences.personalizationEnabled ? personalization.events() : []
-        var ranked = RecommendationEngine().rank(batch.candidates, preferences: preferences, events: events)
+        var candidates = batch.candidates
         if preferences.calendarAvailabilityEnabled,
-           let first = ranked.first?.date,
-           let last = ranked.last?.date {
+           let first = candidates.min(by: { $0.date < $1.date })?.date,
+           let last = candidates.max(by: { $0.date < $1.date })?.date {
             let busy = try await calendar.busyIntervals(in: DateInterval(start: first, end: last.addingTimeInterval(3600)))
-            ranked.removeAll { candidate in
+            candidates.removeAll { candidate in
                 let reading = DateInterval(start: candidate.date, duration: TimeInterval(preferences.duration * 60))
                 return busy.contains { $0.intersects(reading) }
             }
         }
-        return ranked.prefix(5).map { hour in
-            ReadingWindow(id: UUID(), start: hour.date, durationMinutes: preferences.duration, temperature: hour.temperature,
-                          condition: hour.condition, weatherSymbol: hour.symbolName,
-                          place: preferences.place == "Outdoors" ? "Outdoors" : "Indoors",
-                          fitReason: "This time matches your \(preferences.preferredTime.lowercased()) preference and \(preferences.duration)-minute session length.",
-                          bookID: bookID, isCached: isCached, weatherSource: batch.source)
+        return RecommendationEngine().dailyRanges(
+            candidates,
+            preferences: preferences,
+            bookID: bookID,
+            events: events,
+            now: now,
+            limit: 7
+        ).map { window in
+            var window = window
+            window.isCached = isCached
+            window.weatherSource = batch.source
+            return window
         }
     }
 }
@@ -179,7 +235,7 @@ struct LocalNotificationScheduler: NotificationScheduling {
         guard try await center.requestAuthorization(options: [.alert, .sound]) else { return false }
         let content = UNMutableNotificationContent()
         content.title = "Time to read"
-        content.body = "Your planned session with \(bookTitle) starts soon."
+        content.body = "Your planned reading time starts soon."
         content.sound = .default
         content.userInfo = ["sessionID": session.id.uuidString]
         let reminderDate = session.start.addingTimeInterval(TimeInterval(-leadMinutes * 60))

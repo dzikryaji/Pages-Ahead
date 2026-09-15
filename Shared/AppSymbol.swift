@@ -7,6 +7,10 @@ enum HandDrawnSymbol {
 
     static func assetName(for systemName: String) -> String? {
         switch systemName {
+        case "onboarding.book.weather":
+            "onboarding.book.weather"
+        case "onboarding.location":
+            "onboarding.location"
         case "book.closed", "book.closed.fill":
             "handdrawn.book.closed"
         case "book.pages", "book.pages.fill":

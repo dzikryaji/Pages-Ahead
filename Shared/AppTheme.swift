@@ -25,6 +25,11 @@ enum AppTheme {
 }
 
 enum AppTypography {
+    static let displaySuperLarge = Font.custom(
+        "BebasNeue-Regular",
+        size: 64,
+        relativeTo: .largeTitle
+    )
     static let displayLarge = Font.custom(
         "BebasNeue-Regular",
         size: 48,
@@ -42,17 +47,17 @@ enum AppTypography {
     )
     static let displayEyebrow = Font.custom(
         "BebasNeue-Regular",
-        size: 17,
+        size: 18,
         relativeTo: .headline
     )
 
-    static let body = Font.custom("Nunito-Regular", size: 17, relativeTo: .body)
+    static let body = Font.custom("Nunito-Regular", size: 18, relativeTo: .body)
     static let bodySemibold = Font.custom(
         "Nunito-SemiBold",
-        size: 17,
+        size: 18,
         relativeTo: .body
     )
-    static let bodyBold = Font.custom("Nunito-Bold", size: 17, relativeTo: .body)
+    static let bodyBold = Font.custom("Nunito-Bold", size: 18, relativeTo: .body)
     static let description = Font.custom(
         "Nunito-Regular",
         size: 20,
@@ -60,12 +65,12 @@ enum AppTypography {
     )
     static let subheadline = Font.custom(
         "Nunito-Regular",
-        size: 15,
+        size: 16,
         relativeTo: .subheadline
     )
     static let subheadlineSemibold = Font.custom(
         "Nunito-SemiBold",
-        size: 15,
+        size: 16,
         relativeTo: .subheadline
     )
     static let caption = Font.custom(

@@ -67,13 +67,17 @@ struct ReadingPreferencesView: View {
     @Binding var preferences: ReadingPreferences
     var body: some View {
         Form {
-            Section("Reading") {
-                Picker("Duration", selection: $preferences.duration) { ForEach([15, 25, 30, 45, 60], id: \.self) { Text("\($0) min") } }
-                Picker("Time", selection: $preferences.preferredTime) { ForEach(["Morning", "Afternoon", "Evening"], id: \.self) { Text($0) } }
-                Picker("Place", selection: $preferences.place) { ForEach(["Indoors", "Outdoors", "Either"], id: \.self) { Text($0) } }
+            Section("Timing") {
+                Picker("Weekday", selection: $preferences.weekdayPreferredTime) { ForEach(["Morning", "Afternoon", "Evening", "Anytime"], id: \.self) { Text($0) } }
+                Picker("Weekend", selection: $preferences.weekendPreferredTime) { ForEach(["Morning", "Afternoon", "Evening", "Anytime"], id: \.self) { Text($0) } }
             }
-            Section { Picker("Influence", selection: $preferences.weatherInfluence) { ForEach(["Low", "Balanced", "High"], id: \.self) { Text($0) } } }
-            header: { Text("Weather") } footer: { Text("Weather helps rank comfortable times. It never blocks reading.") }
+            Section("Weather") {
+                Picker("Preferred weather", selection: $preferences.preferredWeather) { ForEach(["Cold", "Mild", "Warm"], id: \.self) { Text($0) } }
+                Picker("Priority", selection: $preferences.preferencePriority) { ForEach(["Time", "Balanced", "Weather"], id: \.self) { Text($0) } }
+            }
+            Section("Reading timer") {
+                Picker("Default duration", selection: $preferences.duration) { ForEach([15, 25, 30, 45, 60], id: \.self) { Text("\($0) min") } }
+            }
         }.navigationTitle("Reading Preferences")
     }
 }
@@ -166,9 +170,10 @@ struct PersonalizationDataView: View {
     var body: some View {
         List {
             Section("Preferences") {
-                LabeledContent("Preferred time", value: preferences.preferredTime)
-                LabeledContent("Weather influence", value: preferences.weatherInfluence)
-                LabeledContent("Preferred place", value: preferences.place)
+                LabeledContent("Weekday time", value: preferences.weekdayPreferredTime)
+                LabeledContent("Weekend time", value: preferences.weekendPreferredTime)
+                LabeledContent("Preferred weather", value: preferences.preferredWeather)
+                LabeledContent("Priority", value: preferences.preferencePriority)
             }
             Section("Learning history") {
                 if events.isEmpty { Text("No learning history yet.").foregroundStyle(.secondary) }

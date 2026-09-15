@@ -10,6 +10,21 @@ protocol LibraryRepository: AnyObject {
 
 protocol ForecastRepository {
     func readingWindows(for bookID: UUID) async throws -> [ReadingWindow]
+    func readingWindows(
+        for bookID: UUID,
+        preferences: ReadingPreferences,
+        city: String
+    ) async throws -> [ReadingWindow]
+}
+
+extension ForecastRepository {
+    func readingWindows(
+        for bookID: UUID,
+        preferences: ReadingPreferences,
+        city: String
+    ) async throws -> [ReadingWindow] {
+        try await readingWindows(for: bookID)
+    }
 }
 
 protocol ActivityRepository: AnyObject {
@@ -45,8 +60,10 @@ protocol ReadingActivityManaging: AnyObject {
 
 protocol SettingsRepository: AnyObject {
     var hasCompletedOnboarding: Bool { get set }
+    var hasCreatedReadingPlan: Bool { get set }
     var preferences: ReadingPreferences { get set }
     var city: String { get set }
+    var onboardingDraft: OnboardingDraft? { get set }
 }
 
 protocol BookCatalogSearching {
@@ -134,6 +151,14 @@ extension String {
 
 struct MockForecastRepository: ForecastRepository {
     func readingWindows(for bookID: UUID) async throws -> [ReadingWindow] { SampleData.windows(bookID: bookID) }
+
+    func readingWindows(
+        for bookID: UUID,
+        preferences: ReadingPreferences,
+        city: String
+    ) async throws -> [ReadingWindow] {
+        SampleData.windows(bookID: bookID)
+    }
 }
 
 final class InMemoryActivityRepository: ActivityRepository {
@@ -154,8 +179,10 @@ final class InMemoryActivityRepository: ActivityRepository {
 final class UserDefaultsSettingsRepository: SettingsRepository {
     private enum Key {
         static let onboarding = "hasCompletedOnboarding"
+        static let hasCreatedReadingPlan = "hasCreatedReadingPlan"
         static let preferences = "readingPreferences"
         static let city = "forecastCity"
+        static let onboardingDraft = "onboardingDraftV2"
     }
 
     private let defaults: UserDefaults
@@ -164,6 +191,11 @@ final class UserDefaultsSettingsRepository: SettingsRepository {
     var hasCompletedOnboarding: Bool {
         get { defaults.bool(forKey: Key.onboarding) }
         set { defaults.set(newValue, forKey: Key.onboarding) }
+    }
+
+    var hasCreatedReadingPlan: Bool {
+        get { defaults.bool(forKey: Key.hasCreatedReadingPlan) }
+        set { defaults.set(newValue, forKey: Key.hasCreatedReadingPlan) }
     }
 
     var preferences: ReadingPreferences {
@@ -178,6 +210,22 @@ final class UserDefaultsSettingsRepository: SettingsRepository {
     var city: String {
         get { defaults.string(forKey: Key.city) ?? "Makassar" }
         set { defaults.set(newValue, forKey: Key.city) }
+    }
+
+    var onboardingDraft: OnboardingDraft? {
+        get {
+            guard let data = defaults.data(forKey: Key.onboardingDraft) else {
+                return nil
+            }
+            return try? JSONDecoder().decode(OnboardingDraft.self, from: data)
+        }
+        set {
+            guard let newValue else {
+                defaults.removeObject(forKey: Key.onboardingDraft)
+                return
+            }
+            defaults.set(try? JSONEncoder().encode(newValue), forKey: Key.onboardingDraft)
+        }
     }
 }
 

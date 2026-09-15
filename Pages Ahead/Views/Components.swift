@@ -199,12 +199,13 @@ struct PrimaryButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.headline)
-            .frame(maxWidth: .infinity, minHeight: 50)
+            .padding(.vertical, 12)
+            .font(AppTypography.displayEyebrow)
+            .frame(maxWidth: .infinity)
             .foregroundStyle(.white)
             .background(
                 AppTheme.ink.opacity(configuration.isPressed ? 0.82 : 1),
-                in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                in: Capsule(style: .continuous)
             )
             .opacity(isEnabled ? 1 : 0.45)
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
@@ -236,6 +237,12 @@ extension View {
 extension Date {
     var readingDay: String { formatted(.dateTime.weekday(.wide).month(.abbreviated).day()) }
     var readingTime: String { formatted(date: .omitted, time: .shortened) }
+}
+
+extension ReadingWindow {
+    var readingTimeRange: String {
+        "\(start.readingTime)–\(end.readingTime)"
+    }
 }
 
 #Preview("App Background") {

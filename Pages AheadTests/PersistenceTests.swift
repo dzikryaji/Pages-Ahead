@@ -59,13 +59,26 @@ struct PersistenceTests {
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: StoredBook.self, StoredReadingRecord.self, StoredPlannedSession.self, StoredPersonalizationEvent.self, configurations: configuration)
         let repository = SwiftDataPlannedSessionRepository(context: container.mainContext)
-        var session = PlannedSession(id: UUID(), start: .now, durationMinutes: 30, place: "Indoors", bookID: UUID(), reminderEnabled: true, calendarEnabled: false)
+        var session = PlannedSession(id: UUID(), start: .now, durationMinutes: 30, place: "Indoors", bookID: nil, reminderEnabled: true, calendarEnabled: false)
         repository.save(session)
         session.durationMinutes = 45
         repository.save(session)
         #expect(repository.current()?.durationMinutes == 45)
+        #expect(repository.current()?.bookID == nil)
         repository.delete(id: session.id)
         #expect(repository.current() == nil)
+    }
+
+    @Test func legacyReadingPreferencesGainNewDefaultsWithoutLosingChoices() throws {
+        let data = Data(#"{"preferredTime":"Afternoon","temperature":"Warm","weatherInfluence":"Balanced","duration":45}"#.utf8)
+
+        let preferences = try JSONDecoder().decode(ReadingPreferences.self, from: data)
+
+        #expect(preferences.weekdayPreferredTime == "Afternoon")
+        #expect(preferences.weekendPreferredTime == "Afternoon")
+        #expect(preferences.preferredWeather == "Warm")
+        #expect(preferences.preferencePriority == "Balanced")
+        #expect(preferences.duration == 45)
     }
 
     @Test func personalizationHistoryCanBeCleared() throws {
