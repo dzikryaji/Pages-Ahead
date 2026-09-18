@@ -16,8 +16,7 @@ struct ReadingSessionLiveActivity: Widget {
                 title: context.attributes.bookTitle,
                 author: context.attributes.bookAuthor,
                 startedAt: context.state.startedAt,
-                endsAt: context.state.endsAt,
-                remainingSeconds: context.state.remainingSeconds,
+                elapsedSeconds: context.state.elapsedSeconds,
                 isPaused: context.state.isPaused
             )
             .background {
@@ -39,6 +38,7 @@ struct ReadingSessionLiveActivity: Widget {
             }
             .activityBackgroundTint(AppTheme.background)
             .activitySystemActionForegroundColor(activityInk)
+            .widgetURL(URL(string: "pagesahead://reading-session"))
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
@@ -65,6 +65,7 @@ struct ReadingSessionLiveActivity: Widget {
                 SessionTimeView(state: context.state, compact: true)
             }
             .keylineTint(activityInk)
+            .widgetURL(URL(string: "pagesahead://reading-session"))
         }
     }
 }
@@ -73,8 +74,7 @@ private struct ReadingSessionActivityView: View {
     let title: String
     let author: String
     let startedAt: Date
-    let endsAt: Date
-    let remainingSeconds: Int
+    let elapsedSeconds: Int
     let isPaused: Bool
 
     var body: some View {
@@ -91,14 +91,12 @@ private struct ReadingSessionActivityView: View {
                 Text(title).font(.headline).lineLimit(1)
                 Text(author).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 ZStack(alignment: .bottomLeading) {
-                    Label(durationText(remainingSeconds), systemImage: "pause.fill")
+                    Label(durationText(elapsedSeconds), systemImage: "pause.fill")
                         .font(.subheadline.monospacedDigit())
                         .opacity(isPaused ? 1 : 0)
                         .accessibilityHidden(!isPaused)
                     VStack(alignment: .leading, spacing: 5) {
-                        ProgressView(timerInterval: startedAt...endsAt, countsDown: false)
-                            .tint(activityInk)
-                        Text(timerInterval: Date.now...endsAt, countsDown: true)
+                        Text(startedAt, style: .timer)
                             .font(.subheadline.monospacedDigit())
                     }
                     .opacity(isPaused ? 0 : 1)
@@ -128,11 +126,11 @@ private struct SessionTimeView: View {
                 Image(systemName: "pause.fill")
                     .font(.system(size: 14))
             } else {
-                Label(durationText(state.remainingSeconds), systemImage: "pause.fill")
+                Label(durationText(state.elapsedSeconds), systemImage: "pause.fill")
                     .font(.caption.monospacedDigit())
             }
         } else {
-            Text(timerInterval: Date.now...state.endsAt, countsDown: true)
+            Text(state.startedAt, style: .timer)
                 .font((compact ? Font.caption2 : Font.body).monospacedDigit())
                 .frame(maxWidth: compact ? 42 : nil)
         }
@@ -146,21 +144,18 @@ private func durationText(_ seconds: Int) -> String {
 private let previewAttributes = ReadingSessionActivityAttributes(
     bookID: UUID(),
     bookTitle: "The Left Hand of Darkness",
-    bookAuthor: "Ursula K. Le Guin",
-    durationSeconds: 1_800
+    bookAuthor: "Ursula K. Le Guin"
 )
 
 private let runningPreviewState = ReadingSessionActivityAttributes.ContentState(
     startedAt: .now.addingTimeInterval(-600),
-    endsAt: .now.addingTimeInterval(1_200),
-    remainingSeconds: 1_200,
+    elapsedSeconds: 600,
     isPaused: false
 )
 
 private let pausedPreviewState = ReadingSessionActivityAttributes.ContentState(
     startedAt: .now.addingTimeInterval(-600),
-    endsAt: .now.addingTimeInterval(1_200),
-    remainingSeconds: 1_200,
+    elapsedSeconds: 600,
     isPaused: true
 )
 

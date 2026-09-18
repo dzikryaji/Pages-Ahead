@@ -1,6 +1,6 @@
 import Foundation
 
-struct ForecastCandidate: Codable, Sendable, Equatable {
+struct HourlyWeatherSnapshot: Codable, Sendable, Equatable {
     let date: Date
     let temperature: Int
     let condition: String
@@ -10,7 +10,7 @@ struct ForecastCandidate: Codable, Sendable, Equatable {
 struct RecommendationEngine {
     private static let weekdayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
-    func rank(_ candidates: [ForecastCandidate], preferences: ReadingPreferences, events: [PersonalizationEvent] = [], calendar: Calendar = .current) -> [ForecastCandidate] {
+    func rank(_ candidates: [HourlyWeatherSnapshot], preferences: ReadingPreferences, events: [PersonalizationEvent] = [], calendar: Calendar = .current) -> [HourlyWeatherSnapshot] {
         candidates
             .filter { preferences.availableDays.contains(weekdayName(for: $0.date, calendar: calendar)) }
             .sorted {
@@ -21,7 +21,7 @@ struct RecommendationEngine {
     }
 
     func dailyRanges(
-        _ candidates: [ForecastCandidate],
+        _ candidates: [HourlyWeatherSnapshot],
         preferences: ReadingPreferences,
         bookID: UUID? = nil,
         events: [PersonalizationEvent] = [],
@@ -78,7 +78,7 @@ struct RecommendationEngine {
         Self.weekdayNames[calendar.component(.weekday, from: date) - 1]
     }
 
-    private func score(_ candidate: ForecastCandidate, preferences: ReadingPreferences, events: [PersonalizationEvent], calendar: Calendar) -> Int {
+    private func score(_ candidate: HourlyWeatherSnapshot, preferences: ReadingPreferences, events: [PersonalizationEvent], calendar: Calendar) -> Int {
         let hour = calendar.component(.hour, from: candidate.date)
         let preferredTime = preferredTime(for: candidate.date, preferences: preferences, calendar: calendar)
         let timeMatch: Int = switch preferredTime {
@@ -114,8 +114,8 @@ struct RecommendationEngine {
             : preferences.weekdayPreferredTime
     }
 
-    private func stableBlocks(_ candidates: [ForecastCandidate]) -> [[ForecastCandidate]] {
-        candidates.reduce(into: [[ForecastCandidate]]()) { blocks, candidate in
+    private func stableBlocks(_ candidates: [HourlyWeatherSnapshot]) -> [[HourlyWeatherSnapshot]] {
+        candidates.reduce(into: [[HourlyWeatherSnapshot]]()) { blocks, candidate in
             guard var current = blocks.popLast() else {
                 blocks.append([candidate])
                 return
@@ -135,7 +135,7 @@ struct RecommendationEngine {
     }
 
     private func blockScore(
-        _ block: [ForecastCandidate],
+        _ block: [HourlyWeatherSnapshot],
         preferences: ReadingPreferences,
         events: [PersonalizationEvent],
         calendar: Calendar
@@ -144,7 +144,7 @@ struct RecommendationEngine {
             + min(block.count, 6)
     }
 
-    private func weatherCategory(_ candidate: ForecastCandidate) -> String {
+    private func weatherCategory(_ candidate: HourlyWeatherSnapshot) -> String {
         let value = "\(candidate.symbolName) \(candidate.condition)".lowercased()
         if value.contains("thunder") || value.contains("bolt") { return "storm" }
         if value.contains("snow") || value.contains("sleet") { return "snow" }

@@ -2,21 +2,24 @@ import SwiftUI
 
 struct MainTabView: View {
     let container: AppContainer
+    @Bindable var planManager: ReadingPlanManager
+    @Bindable var sessionCoordinator: ReadingSessionCoordinator
     let onReplayOnboarding: () -> Void
-    let startPlannedSessionOnAppear: Bool
-    @State private var forecastViewModel: ForecastViewModel
+    @State private var readingPlanViewModel: ReadingPlanViewModel
     @State private var libraryViewModel: LibraryViewModel
     @State private var activityViewModel: ActivityViewModel
 
     init(
         container: AppContainer,
-        onReplayOnboarding: @escaping () -> Void = {},
-        startPlannedSessionOnAppear: Bool = false
+        planManager: ReadingPlanManager,
+        sessionCoordinator: ReadingSessionCoordinator,
+        onReplayOnboarding: @escaping () -> Void = {}
     ) {
         self.container = container
+        self.planManager = planManager
+        self.sessionCoordinator = sessionCoordinator
         self.onReplayOnboarding = onReplayOnboarding
-        self.startPlannedSessionOnAppear = startPlannedSessionOnAppear
-        _forecastViewModel = State(initialValue: ForecastViewModel(library: container.library, repository: container.forecast, sessions: container.sessions, personalization: container.personalization))
+        _readingPlanViewModel = State(initialValue: ReadingPlanViewModel(library: container.library, repository: container.readingWindows, personalization: container.personalization))
         _libraryViewModel = State(initialValue: LibraryViewModel(repository: container.library))
         _activityViewModel = State(initialValue: ActivityViewModel(repository: container.activity, library: container.library))
     }
@@ -24,21 +27,21 @@ struct MainTabView: View {
     var body: some View {
         TabView {
             Tab("Reading Plan", systemImage: "cloud.sun.fill") {
-                ForecastHomeView(
-                    viewModel: forecastViewModel,
-                    activityRepository: container.activity,
-                    sessionProgress: container.sessionProgress,
-                    readingActivity: container.readingActivity,
-                    notifications: container.notifications,
-                    calendarWriter: container.calendar,
+                ReadingPlanView(
+                    viewModel: readingPlanViewModel,
+                    planManager: planManager,
+                    sessionCoordinator: sessionCoordinator,
                     settings: container.settings,
-                    personalization: container.personalization,
-                    onReplayOnboarding: onReplayOnboarding,
-                    startPlannedSessionOnAppear: startPlannedSessionOnAppear
+                    onReplayOnboarding: onReplayOnboarding
                 )
             }
             Tab("Library", systemImage: "books.vertical.fill") {
-                LibraryView(viewModel: libraryViewModel, activityRepository: container.activity, personalization: container.personalization, sessionProgress: container.sessionProgress, readingActivity: container.readingActivity, catalog: container.catalog, catalogCache: container.catalogCache)
+                LibraryView(
+                    viewModel: libraryViewModel,
+                    sessionCoordinator: sessionCoordinator,
+                    catalog: container.catalog,
+                    catalogCache: container.catalogCache
+                )
             }
             Tab("Activity", systemImage: "chart.bar.fill") {
                 ActivityView(viewModel: activityViewModel)
@@ -48,5 +51,23 @@ struct MainTabView: View {
 }
 
 #Preview("Main Tabs") {
-    MainTabView(container: .preview)
+    let container = AppContainer.preview
+    MainTabView(
+        container: container,
+        planManager: ReadingPlanManager(
+            repository: container.readingPlans,
+            notifications: container.notifications,
+            calendarWriter: container.calendar,
+            settings: container.settings
+        ),
+        sessionCoordinator: ReadingSessionCoordinator(
+            library: container.library,
+            activity: container.activity,
+            readingPlans: container.readingPlans,
+            progressStore: container.sessionProgress,
+            activityManager: container.readingActivity,
+            notifications: container.notifications,
+            calendarWriter: container.calendar
+        )
+    )
 }

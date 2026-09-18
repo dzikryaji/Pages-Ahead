@@ -2,7 +2,6 @@ import SwiftUI
 import UIKit
 
 enum HandDrawnSymbol {
-    private static let croppedImageCache = NSCache<NSString, UIImage>()
     private static let renderedImageCache = NSCache<NSString, UIImage>()
 
     static func assetName(for systemName: String) -> String? {
@@ -11,20 +10,14 @@ enum HandDrawnSymbol {
             "onboarding.book.weather"
         case "onboarding.location":
             "onboarding.location"
-        case "book.closed", "book.closed.fill":
-            "handdrawn.book.closed"
         case "book.pages", "book.pages.fill":
             "handdrawn.book.pages"
         case "book", "book.fill":
             "handdrawn.book"
         case "books.vertical", "books.vertical.fill":
             "handdrawn.books.vertical"
-        case "chart.bar", "chart.bar.fill":
-            "handdrawn.chart.bar"
         case "chart.bar.xaxis":
             "handdrawn.chart.bar.xaxis"
-        case "chart.line.uptrend.xyaxis":
-            "handdrawn.chart.line.uptrend.xyaxis"
         case "cloud.bolt", "cloud.bolt.fill":
             "handdrawn.cloud.bolt"
         case "cloud.bolt.rain", "cloud.bolt.rain.fill":
@@ -49,8 +42,6 @@ enum HandDrawnSymbol {
             "handdrawn.text.book.closed"
         case "text.page", "text.page.fill":
             "handdrawn.text.page"
-        case "thermometer.medium":
-            "handdrawn.thermometer.medium"
         default:
             nil
         }
@@ -63,7 +54,9 @@ enum HandDrawnSymbol {
             return cached
         }
 
-        guard let source = croppedImage(for: assetName) else { return nil }
+        guard let source = UIImage(named: assetName, in: .main, compatibleWith: nil) else {
+            return nil
+        }
 
         let targetSize = CGSize(width: pointSize, height: pointSize)
         let format = UIGraphicsImageRendererFormat()
@@ -88,58 +81,6 @@ enum HandDrawnSymbol {
         }
         renderedImageCache.setObject(rendered, forKey: renderedKey)
         return rendered
-    }
-
-    private static func croppedImage(for assetName: String) -> UIImage? {
-        let cacheKey = assetName as NSString
-        if let cached = croppedImageCache.object(forKey: cacheKey) {
-            return cached
-        }
-
-        guard let source = UIImage(named: assetName, in: .main, compatibleWith: nil),
-              let sourceImage = source.cgImage
-        else { return nil }
-
-        let width = sourceImage.width
-        let height = sourceImage.height
-        var pixels = [UInt8](repeating: 0, count: width * height * 4)
-        guard let context = CGContext(
-            data: &pixels,
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bytesPerRow: width * 4,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else { return nil }
-
-        context.draw(sourceImage, in: CGRect(x: 0, y: 0, width: width, height: height))
-        var minimumX = width
-        var minimumY = height
-        var maximumX = 0
-        var maximumY = 0
-        for y in 0..<height {
-            for x in 0..<width where pixels[(y * width + x) * 4 + 3] >= 24 {
-                minimumX = min(minimumX, x)
-                minimumY = min(minimumY, y)
-                maximumX = max(maximumX, x)
-                maximumY = max(maximumY, y)
-            }
-        }
-
-        guard minimumX <= maximumX, minimumY <= maximumY,
-              let normalizedImage = context.makeImage(),
-              let cropped = normalizedImage.cropping(to: CGRect(
-                x: minimumX,
-                y: minimumY,
-                width: maximumX - minimumX + 1,
-                height: maximumY - minimumY + 1
-              ))
-        else { return nil }
-
-        let result = UIImage(cgImage: cropped)
-        croppedImageCache.setObject(result, forKey: cacheKey)
-        return result
     }
 }
 

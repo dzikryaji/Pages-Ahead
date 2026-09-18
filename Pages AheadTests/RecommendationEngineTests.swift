@@ -6,7 +6,7 @@ struct RecommendationEngineTests {
     @Test func unavailableDaysAreFiltered() {
         var preferences = ReadingPreferences()
         preferences.availableDays = []
-        let candidate = ForecastCandidate(date: .now, temperature: 24, condition: "Clear", symbolName: "sun.max")
+        let candidate = HourlyWeatherSnapshot(date: .now, temperature: 24, condition: "Clear", symbolName: "sun.max")
         #expect(RecommendationEngine().rank([candidate], preferences: preferences).isEmpty)
     }
 
@@ -16,8 +16,8 @@ struct RecommendationEngineTests {
         preferences.weekdayPreferredTime = "Evening"
         preferences.weekendPreferredTime = "Evening"
         let calendar = Calendar.current
-        let morning = ForecastCandidate(date: calendar.date(bySettingHour: 8, minute: 0, second: 0, of: .now)!, temperature: 24, condition: "Clear", symbolName: "sun.max")
-        let evening = ForecastCandidate(date: calendar.date(bySettingHour: 19, minute: 0, second: 0, of: .now)!, temperature: 24, condition: "Clear", symbolName: "moon")
+        let morning = HourlyWeatherSnapshot(date: calendar.date(bySettingHour: 8, minute: 0, second: 0, of: .now)!, temperature: 24, condition: "Clear", symbolName: "sun.max")
+        let evening = HourlyWeatherSnapshot(date: calendar.date(bySettingHour: 19, minute: 0, second: 0, of: .now)!, temperature: 24, condition: "Clear", symbolName: "moon")
         #expect(RecommendationEngine().rank([morning, evening], preferences: preferences).first?.date == evening.date)
     }
 
@@ -27,8 +27,8 @@ struct RecommendationEngineTests {
         preferences.weekdayPreferredTime = "Evening"
         preferences.weekendPreferredTime = "Evening"
         let calendar = Calendar.current
-        let morning = ForecastCandidate(date: calendar.date(bySettingHour: 8, minute: 0, second: 0, of: .now)!, temperature: 24, condition: "Clear", symbolName: "sun.max")
-        let afternoon = ForecastCandidate(date: calendar.date(bySettingHour: 14, minute: 0, second: 0, of: .now)!, temperature: 24, condition: "Clear", symbolName: "sun.max")
+        let morning = HourlyWeatherSnapshot(date: calendar.date(bySettingHour: 8, minute: 0, second: 0, of: .now)!, temperature: 24, condition: "Clear", symbolName: "sun.max")
+        let afternoon = HourlyWeatherSnapshot(date: calendar.date(bySettingHour: 14, minute: 0, second: 0, of: .now)!, temperature: 24, condition: "Clear", symbolName: "sun.max")
         let events = (0..<2).map { _ in PersonalizationEvent(id: UUID(), kind: .completed, date: .now, hour: 8, temperature: nil, place: "Indoors", reason: nil) }
         #expect(RecommendationEngine().rank([afternoon, morning], preferences: preferences, events: events).first?.date == morning.date)
     }
@@ -38,8 +38,8 @@ struct RecommendationEngineTests {
         preferences.availableDays = Set(["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"])
         preferences.personalizationEnabled = false
         let calendar = Calendar.current
-        let first = ForecastCandidate(date: calendar.date(bySettingHour: 8, minute: 0, second: 0, of: .now)!, temperature: 24, condition: "Clear", symbolName: "sun.max")
-        let second = ForecastCandidate(date: calendar.date(bySettingHour: 14, minute: 0, second: 0, of: .now)!, temperature: 24, condition: "Clear", symbolName: "sun.max")
+        let first = HourlyWeatherSnapshot(date: calendar.date(bySettingHour: 8, minute: 0, second: 0, of: .now)!, temperature: 24, condition: "Clear", symbolName: "sun.max")
+        let second = HourlyWeatherSnapshot(date: calendar.date(bySettingHour: 14, minute: 0, second: 0, of: .now)!, temperature: 24, condition: "Clear", symbolName: "sun.max")
         let event = PersonalizationEvent(id: UUID(), kind: .rejected, date: .now, hour: 8, temperature: nil, place: "Indoors", reason: nil)
         let baseline = RecommendationEngine().rank([first, second], preferences: preferences)
         let withHistory = RecommendationEngine().rank([first, second], preferences: preferences, events: [event])
@@ -49,8 +49,8 @@ struct RecommendationEngineTests {
     @Test func equallySuitableWindowsUseChronologicalProximity() {
         var preferences = ReadingPreferences()
         preferences.availableDays = Set(["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"])
-        let later = ForecastCandidate(date: .now.addingTimeInterval(7_200), temperature: 24, condition: "Clear", symbolName: "sun.max")
-        let sooner = ForecastCandidate(date: .now.addingTimeInterval(3_600), temperature: 24, condition: "Clear", symbolName: "sun.max")
+        let later = HourlyWeatherSnapshot(date: .now.addingTimeInterval(7_200), temperature: 24, condition: "Clear", symbolName: "sun.max")
+        let sooner = HourlyWeatherSnapshot(date: .now.addingTimeInterval(3_600), temperature: 24, condition: "Clear", symbolName: "sun.max")
 
         let ranked = RecommendationEngine().rank([later, sooner], preferences: preferences)
 
@@ -67,7 +67,7 @@ struct RecommendationEngineTests {
         preferences.weekendPreferredTime = "Morning"
         let candidates = (0..<3).flatMap { day in
             (6...22).map { hour in
-                ForecastCandidate(
+                HourlyWeatherSnapshot(
                     date: calendar.date(byAdding: .hour, value: day * 24 + hour, to: start)!,
                     temperature: hour < 12 ? 20 : 25,
                     condition: hour < 12 ? "Cloudy" : "Clear",
@@ -97,7 +97,7 @@ struct RecommendationEngineTests {
         preferences.weekdayPreferredTime = "Morning"
         preferences.weekendPreferredTime = "Morning"
         let candidates = [20, 21, 22, 23].enumerated().map { index, temperature in
-            ForecastCandidate(
+            HourlyWeatherSnapshot(
                 date: calendar.date(byAdding: .hour, value: 7 + index, to: day)!,
                 temperature: temperature,
                 condition: "Cloudy",
@@ -124,7 +124,7 @@ struct RecommendationEngineTests {
         preferences.weekdayPreferredTime = "Anytime"
         preferences.weekendPreferredTime = "Anytime"
         let candidates = (18...21).map { hour in
-            ForecastCandidate(
+            HourlyWeatherSnapshot(
                 date: calendar.date(byAdding: .hour, value: hour, to: day)!,
                 temperature: 24,
                 condition: "Clear",

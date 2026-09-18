@@ -14,7 +14,6 @@ enum AppTheme {
     static let tertiaryText = Color(red: 112 / 255, green: 112 / 255, blue: 112 / 255)
     static let border = Color(red: 133 / 255, green: 133 / 255, blue: 133 / 255)
     static let surface = Color.white
-    static let subtleSurface = Color.white.opacity(0.72)
     static let selectedSurface = ink.opacity(0.08)
 
     static let coverGradient = LinearGradient(

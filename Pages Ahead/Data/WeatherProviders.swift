@@ -2,7 +2,7 @@ import Foundation
 import WeatherKit
 
 struct WeatherForecastBatch: Codable, Sendable {
-    let candidates: [ForecastCandidate]
+    let candidates: [HourlyWeatherSnapshot]
     let source: WeatherDataSource
 }
 
@@ -21,9 +21,9 @@ enum WeatherProviderError: LocalizedError {
 struct WeatherKitWeatherProvider: WeatherProviding {
     func hourlyForecast(at coordinate: LocationCoordinate) async throws -> WeatherForecastBatch {
         let hourly = try await WeatherService.shared.weather(for: coordinate.coreLocation, including: .hourly)
-        let candidates = hourly.forecast.compactMap { hour -> ForecastCandidate? in
+        let candidates = hourly.forecast.compactMap { hour -> HourlyWeatherSnapshot? in
             guard hour.date > .now else { return nil }
-            return ForecastCandidate(date: hour.date,
+            return HourlyWeatherSnapshot(date: hour.date,
                                      temperature: Int(hour.temperature.converted(to: .celsius).value.rounded()),
                                      condition: hour.condition.description,
                                      symbolName: hour.symbolName)
@@ -70,11 +70,11 @@ struct OpenMeteoWeatherProvider: WeatherProviding {
     func decode(_ data: Data, now: Date = .now) throws -> WeatherForecastBatch {
         let hourly = try JSONDecoder().decode(Response.self, from: data).hourly
         let count = min(hourly.time.count, hourly.temperature.count, hourly.weatherCode.count)
-        let candidates = (0..<count).compactMap { index -> ForecastCandidate? in
+        let candidates = (0..<count).compactMap { index -> HourlyWeatherSnapshot? in
             let date = Date(timeIntervalSince1970: hourly.time[index])
             guard date > now else { return nil }
             let presentation = presentation(for: hourly.weatherCode[index])
-            return ForecastCandidate(date: date, temperature: Int(hourly.temperature[index].rounded()),
+            return HourlyWeatherSnapshot(date: date, temperature: Int(hourly.temperature[index].rounded()),
                                      condition: presentation.condition, symbolName: presentation.symbol)
         }
         guard !candidates.isEmpty else { throw WeatherProviderError.noForecast }
@@ -103,10 +103,10 @@ struct MockWeatherProvider: WeatherProviding {
             (26, "Clear", "sun.max.fill"),
             (25, "Partly cloudy", "cloud.sun.fill")
         ]
-        let candidates = (1...168).compactMap { offset -> ForecastCandidate? in
+        let candidates = (1...168).compactMap { offset -> HourlyWeatherSnapshot? in
             guard let date = Calendar.current.date(byAdding: .hour, value: offset, to: .now) else { return nil }
             let condition = conditions[(offset / 6) % conditions.count]
-            return ForecastCandidate(date: date, temperature: condition.0, condition: condition.1, symbolName: condition.2)
+            return HourlyWeatherSnapshot(date: date, temperature: condition.0, condition: condition.1, symbolName: condition.2)
         }
         return WeatherForecastBatch(candidates: candidates, source: .mock)
     }

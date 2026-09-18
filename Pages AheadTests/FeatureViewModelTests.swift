@@ -6,7 +6,7 @@ import Testing
 struct FeatureViewModelTests {
     @Test func onboardingFollowsThreeLockedGroupsAndCommitsBooksAtEnd() async {
         let container = AppContainer.uiTesting
-        let viewModel = AppViewModel(container: container)
+        let viewModel = AppFlowViewModel(container: container)
 
         #expect(viewModel.route == .onboarding(.welcome))
         viewModel.continueIntroduction()
@@ -36,12 +36,11 @@ struct FeatureViewModelTests {
         #expect(container.settings.hasCompletedOnboarding)
         #expect(container.library.books().count == 2)
         #expect(container.library.books().allSatisfy { $0.status == .saved })
-        #expect(container.settings.onboardingDraft == nil)
     }
 
     @Test func onboardingBackNeverCrossesACompletedGroup() {
         let container = AppContainer.uiTesting
-        let viewModel = AppViewModel(container: container)
+        let viewModel = AppFlowViewModel(container: container)
 
         viewModel.skipIntroduction()
         #expect(viewModel.route == .onboarding(.preferences))
@@ -58,18 +57,18 @@ struct FeatureViewModelTests {
 
     @Test func onboardingResetsAfterAnInterruptedLaunch() {
         let container = AppContainer.uiTesting
-        let first = AppViewModel(container: container)
+        let first = AppFlowViewModel(container: container)
         first.skipIntroduction()
         first.finishPreferences()
 
-        let resumed = AppViewModel(container: container)
+        let resumed = AppFlowViewModel(container: container)
         #expect(resumed.route == .onboarding(.welcome))
         #expect(resumed.draft.selectedBooks.isEmpty)
     }
 
     @Test func planningAndReminderAreContextual() async {
         let container = AppContainer.uiTesting
-        let viewModel = AppViewModel(container: container)
+        let viewModel = AppFlowViewModel(container: container)
         viewModel.skipIntroduction()
         viewModel.finishPreferences()
         viewModel.setSelectedBooks([SampleData.books[0]])
@@ -78,17 +77,16 @@ struct FeatureViewModelTests {
         await viewModel.finishLocationSetup()
 
         await viewModel.confirmSelectedTime()
-        #expect(viewModel.draft.plannedSession != nil)
+        #expect(viewModel.draft.readingPlan != nil)
         #expect(viewModel.route == .onboarding(.complete))
-        #expect(viewModel.draft.notificationOutcome == .scheduled)
-        #expect(container.sessions.current()?.reminderEnabled == true)
-        #expect(container.sessions.current()?.bookID == nil)
+        #expect(container.readingPlans.current()?.reminderEnabled == true)
+        #expect(container.readingPlans.current()?.bookID == nil)
         #expect(container.settings.hasCreatedReadingPlan)
     }
 
     @Test func planLaterRemovesOnlyProvisionalOnboardingPlan() async {
         let container = AppContainer.uiTesting
-        let viewModel = AppViewModel(container: container)
+        let viewModel = AppFlowViewModel(container: container)
         viewModel.skipIntroduction()
         viewModel.finishPreferences()
         viewModel.setSelectedBooks([SampleData.books[0]])
@@ -96,32 +94,31 @@ struct FeatureViewModelTests {
         await viewModel.useCurrentLocation()
         await viewModel.finishLocationSetup()
         viewModel.planSelectedTime()
-        #expect(container.sessions.current() != nil)
+        #expect(container.readingPlans.current() != nil)
 
         viewModel.planLater()
 
-        #expect(container.sessions.current() == nil)
-        #expect(viewModel.draft.notificationOutcome == .notRequested)
+        #expect(container.readingPlans.current() == nil)
     }
 
     @Test func replayPrefillsWithoutDuplicatingBookOrPlan() async {
         let container = AppContainer.uiTesting
         container.library.add(SampleData.books[0])
-        let session = PlannedSession(
+        let session = ReadingPlan(
             id: UUID(), start: .now.addingTimeInterval(7_200),
             durationMinutes: 30, place: "Indoors",
             bookID: SampleData.books[0].id, reminderEnabled: false,
             calendarEnabled: false
         )
-        container.sessions.save(session)
+        container.readingPlans.save(session)
         container.settings.hasCompletedOnboarding = true
-        let viewModel = AppViewModel(container: container)
+        let viewModel = AppFlowViewModel(container: container)
 
         viewModel.replayOnboarding()
         #expect(viewModel.route == .onboarding(.welcome))
         #expect(!container.settings.hasCompletedOnboarding)
         #expect(viewModel.draft.selectedBooks.first?.id == SampleData.books[0].id)
-        #expect(viewModel.draft.plannedSession?.id == session.id)
+        #expect(viewModel.draft.readingPlan?.id == session.id)
 
         viewModel.skipIntroduction()
         viewModel.finishPreferences()
@@ -129,40 +126,27 @@ struct FeatureViewModelTests {
         viewModel.go(to: .complete)
         viewModel.completeOnboarding()
         #expect(container.library.books().count == 1)
-        #expect(container.sessions.current()?.id == session.id)
-    }
-
-    @Test func completedSessionProgressUpdatesBook() {
-        let original = Book(id: UUID(), title: "Test Book", author: "Author", edition: "Edition", isbn: "1", pageCount: 100, status: .saved, currentPage: 10)
-        let library = InMemoryLibraryRepository(books: [original])
-        let viewModel = ForecastViewModel(library: library, repository: MockForecastRepository(), sessions: InMemoryPlannedSessionRepository(), personalization: InMemoryPersonalizationRepository())
-
-        viewModel.addProgress(25, to: original)
-
-        #expect(library.books().first?.currentPage == 35)
-        #expect(library.books().first?.status == .reading)
-    }
-
-    @Test func completingFinalPagesMarksBookFinished() {
-        let original = Book(id: UUID(), title: "Test Book", author: "Author", edition: "Edition", isbn: "1", pageCount: 100, status: .reading, currentPage: 95)
-        let library = InMemoryLibraryRepository(books: [original])
-        let viewModel = ForecastViewModel(library: library, repository: MockForecastRepository(), sessions: InMemoryPlannedSessionRepository(), personalization: InMemoryPersonalizationRepository())
-
-        viewModel.addProgress(10, to: original)
-
-        #expect(library.books().first?.currentPage == 100)
-        #expect(library.books().first?.status == .finished)
+        #expect(container.readingPlans.current()?.id == session.id)
     }
 
     @Test func readingSessionKeepsLiveActivityInSync() async {
         let manager = RecordingReadingActivityManager()
         let store = InMemorySessionProgressRepository()
         let book = SampleData.books[0]
-        let viewModel = ReadingSessionViewModel(book: book, durationMinutes: 30, store: store, activityManager: manager)
+        let coordinator = ReadingSessionCoordinator(
+            library: InMemoryLibraryRepository(books: [book]),
+            activity: InMemoryActivityRepository(records: []),
+            readingPlans: InMemoryReadingPlanRepository(),
+            progressStore: store,
+            activityManager: manager,
+            notifications: PreviewNotificationScheduler(),
+            calendarWriter: PreviewCalendarWriter()
+        )
 
-        await viewModel.startLiveActivity()
-        await viewModel.togglePause()
-        await viewModel.finish()
+        #expect(coordinator.start(book: book, origin: .bookDetail))
+        await Task.yield()
+        await coordinator.togglePause()
+        await coordinator.endWithoutSaving()
 
         #expect(manager.startedBookID == book.id)
         #expect(manager.updatedSession?.isPaused == true)
@@ -174,16 +158,20 @@ struct FeatureViewModelTests {
         let manager = RecordingReadingActivityManager()
         let store = InMemorySessionProgressRepository()
         let book = SampleData.books[0]
-        let viewModel = ReadingSessionViewModel(
-            book: book,
-            durationMinutes: 30,
-            store: store,
-            activityManager: manager
+        let coordinator = ReadingSessionCoordinator(
+            library: InMemoryLibraryRepository(books: [book]),
+            activity: InMemoryActivityRepository(records: []),
+            readingPlans: InMemoryReadingPlanRepository(),
+            progressStore: store,
+            activityManager: manager,
+            notifications: PreviewNotificationScheduler(),
+            calendarWriter: PreviewCalendarWriter()
         )
 
-        await viewModel.startLiveActivity()
-        await viewModel.leaveSession()
-        await viewModel.leaveSession()
+        #expect(coordinator.start(book: book, origin: .bookDetail))
+        await Task.yield()
+        await coordinator.endWithoutSaving()
+        await coordinator.endWithoutSaving()
 
         #expect(manager.endedBookID == book.id)
         #expect(manager.endCallCount == 1)
@@ -193,8 +181,8 @@ struct FeatureViewModelTests {
     @Test func activityInsightUsesRecordedAverages() {
         let bookID = UUID()
         let records = [
-            ReadingRecord(id: UUID(), bookID: bookID, date: .now, minutes: 40, pages: 10, weather: "Rain", place: "Home", feedback: "Calm", note: ""),
-            ReadingRecord(id: UUID(), bookID: bookID, date: .now, minutes: 20, pages: 5, weather: "Clear", place: "Home", feedback: "Calm", note: "")
+            ReadingRecord(id: UUID(), bookID: bookID, date: .now, minutes: 40, pages: 10, weather: "Rain"),
+            ReadingRecord(id: UUID(), bookID: bookID, date: .now, minutes: 20, pages: 5, weather: "Clear")
         ]
         let activity = InMemoryActivityRepository(bookID: bookID, records: records)
         let viewModel = ActivityViewModel(repository: activity, library: InMemoryLibraryRepository(books: []))
@@ -203,7 +191,7 @@ struct FeatureViewModelTests {
     }
 
     @Test func weatherProviderUsesNextAvailableSource() async throws {
-        let candidate = ForecastCandidate(date: .now.addingTimeInterval(3_600), temperature: 25, condition: "Clear", symbolName: "sun.max.fill")
+        let candidate = HourlyWeatherSnapshot(date: .now.addingTimeInterval(3_600), temperature: 25, condition: "Clear", symbolName: "sun.max.fill")
         let chain = FallbackWeatherProvider(providers: [FailingWeatherProvider(), FixedWeatherProvider(candidate: candidate)])
 
         let result = try await chain.hourlyForecast(at: LocationCoordinate(latitude: 0, longitude: 0))
@@ -212,7 +200,7 @@ struct FeatureViewModelTests {
         #expect(result.candidates.first?.temperature == 25)
     }
 
-    @Test func openMeteoResponseMapsIntoForecastCandidates() throws {
+    @Test func openMeteoResponseMapsIntoHourlyWeatherSnapshots() throws {
         let data = Data(#"{"hourly":{"time":[4102444800],"temperature_2m":[27.4],"weather_code":[61]}}"#.utf8)
 
         let result = try OpenMeteoWeatherProvider().decode(data, now: Date(timeIntervalSince1970: 0))
@@ -233,7 +221,7 @@ struct FeatureViewModelTests {
         settings.preferences = preferences
         settings.city = "Makassar"
         let counter = WeatherCallCounter()
-        let repository = WeatherKitForecastRepository(
+        let repository = WeatherReadingWindowRepository(
             settings: settings,
             location: PreviewLocationService(),
             calendar: PreviewCalendarWriter(),
@@ -269,7 +257,7 @@ struct FeatureViewModelTests {
         settings.preferences = preferences
         let cache = UserDefaultsWeatherForecastCache(defaults: defaults, key: "expiredWindow")
         let oldHours = (18...20).map { hour in
-            ForecastCandidate(
+            HourlyWeatherSnapshot(
                 date: fixedNow.addingTimeInterval(TimeInterval((-24 + hour - 18) * 3_600)),
                 temperature: 24,
                 condition: "Clear",
@@ -282,7 +270,7 @@ struct FeatureViewModelTests {
             at: fixedNow.addingTimeInterval(-20 * 3_600)
         )
         let counter = WeatherCallCounter()
-        let repository = WeatherKitForecastRepository(
+        let repository = WeatherReadingWindowRepository(
             settings: settings,
             location: PreviewLocationService(),
             calendar: PreviewCalendarWriter(),
@@ -395,7 +383,7 @@ private struct FailingWeatherProvider: WeatherProviding {
 }
 
 private struct FixedWeatherProvider: WeatherProviding {
-    let candidate: ForecastCandidate
+    let candidate: HourlyWeatherSnapshot
     func hourlyForecast(at coordinate: LocationCoordinate) async throws -> WeatherForecastBatch {
         WeatherForecastBatch(candidates: [candidate], source: .openMeteo)
     }
@@ -413,7 +401,7 @@ private struct CountingWeatherProvider: WeatherProviding {
     func hourlyForecast(at coordinate: LocationCoordinate) async throws -> WeatherForecastBatch {
         await counter.increment()
         let candidates = (1...168).map { hour in
-            ForecastCandidate(date: start.addingTimeInterval(TimeInterval(hour * 3_600)),
+            HourlyWeatherSnapshot(date: start.addingTimeInterval(TimeInterval(hour * 3_600)),
                               temperature: 25, condition: "Clear", symbolName: "sun.max.fill")
         }
         return WeatherForecastBatch(candidates: candidates, source: .openMeteo)

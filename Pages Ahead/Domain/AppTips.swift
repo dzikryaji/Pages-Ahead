@@ -2,8 +2,8 @@ import SwiftUI
 import TipKit
 
 struct RejectionFeedbackTip: Tip {
-    static let forecastDetailViewed = Tips.Event(
-        id: "forecast-detail-viewed"
+    static let readingWindowDetailViewed = Tips.Event(
+        id: "reading-window-detail-viewed"
     )
 
     var title: Text { Text("Improve future suggestions") }
@@ -20,7 +20,7 @@ struct RejectionFeedbackTip: Tip {
     }
 
     var rules: [Rule] {
-        #Rule(Self.forecastDetailViewed) { event in
+        #Rule(Self.readingWindowDetailViewed) { event in
             event.donations.count >= 2
         }
     }
@@ -28,4 +28,13 @@ struct RejectionFeedbackTip: Tip {
     var options: [Option] {
         MaxDisplayCount(3)
     }
+}
+
+struct PermissionRecoveryTip: Tip {
+    var title: Text { Text("Restore plan integrations") }
+    var message: Text? {
+        Text("Notification or Calendar access was previously denied. Turn an option on to open Settings and allow access.")
+    }
+    var image: Image? { Image(systemName: "gearshape.badge") }
+    var options: [Option] { MaxDisplayCount(1) }
 }

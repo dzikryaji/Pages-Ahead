@@ -50,11 +50,11 @@ struct PagesAheadApp: App {
                     .preferredColorScheme(.light)
                     .tint(AppTheme.ink)
             } else {
-                ContentView(container: container)
+                AppRootView(container: container)
                     .preferredColorScheme(.light)
             }
 #else
-            ContentView(container: container)
+            AppRootView(container: container)
                 .preferredColorScheme(.light)
 #endif
         }
