@@ -35,6 +35,8 @@ struct PagesAheadApp: App {
                 "TipKit configuration failed: \(error.localizedDescription, privacy: .public)"
             )
         }
+        
+        AppTheme.configureSegmentedControlAppearance()
 #if DEBUG
         if ScreenshotScenario.current != nil {
             Tips.showAllTipsForTesting()
@@ -48,7 +50,7 @@ struct PagesAheadApp: App {
             if let scenario = ScreenshotScenario.current {
                 ScreenshotScenarioView(scenario: scenario)
                     .preferredColorScheme(.light)
-                    .tint(AppTheme.ink)
+                    .tint(AppTheme.accent)
             } else {
                 AppRootView(container: container)
                     .preferredColorScheme(.light)

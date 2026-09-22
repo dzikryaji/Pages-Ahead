@@ -105,6 +105,28 @@ struct AppContainer {
             startupError: nil
         )
     }
+    
+    static var empty: AppContainer {
+        let library = InMemoryLibraryRepository(books: [])
+        return AppContainer(
+            persistentContainer: nil,
+            catalogPersistentContainer: nil,
+            library: library,
+            readingWindows: MockReadingWindowRepository(),
+            activity: InMemoryActivityRepository(records: []),
+            readingPlans: InMemoryReadingPlanRepository(),
+            personalization: InMemoryPersonalizationRepository(),
+            sessionProgress: InMemorySessionProgressRepository(),
+            readingActivity: PreviewReadingActivityManager(),
+            settings: UserDefaultsSettingsRepository(defaults: UserDefaults(suiteName: "PagesAheadEmptyPreview")!),
+            catalog: PreviewCatalogService(),
+            catalogCache: InMemoryCatalogSearchCache(),
+            location: PreviewLocationService(),
+            notifications: PreviewNotificationScheduler(),
+            calendar: PreviewCalendarWriter(),
+            startupError: nil
+        )
+    }
 
     static var uiTesting: AppContainer {
         let suiteName = "PagesAheadUITests-\(ProcessInfo.processInfo.processIdentifier)"

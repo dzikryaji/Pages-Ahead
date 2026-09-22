@@ -26,16 +26,16 @@ struct LiveActivityReferenceView: View {
                 .frame(width: 30, height: 30)
                 .foregroundStyle(.white)
                 .frame(width: 48, height: 64)
-                .background(AppTheme.ink, in: RoundedRectangle(cornerRadius: 10))
+                .background(AppTheme.accent, in: RoundedRectangle(cornerRadius: 10))
             VStack(alignment: .leading, spacing: 5) {
-                Text("READING NOW").font(.caption2.bold()).foregroundStyle(AppTheme.ink)
+                Text("READING NOW").font(.caption2.bold()).foregroundStyle(AppTheme.accent)
                 Text(SampleData.books[0].title).font(.headline).lineLimit(1)
                 Text(SampleData.books[0].author).font(.caption).foregroundStyle(.secondary)
                 if paused {
                     Label("19:48", systemImage: "pause.fill")
                         .font(.subheadline.monospacedDigit())
                 } else {
-                    ProgressView(value: 0.34).tint(AppTheme.ink)
+                    ProgressView(value: 0.34).tint(AppTheme.accent)
                     Text("19:48 remaining").font(.subheadline.monospacedDigit())
                 }
             }

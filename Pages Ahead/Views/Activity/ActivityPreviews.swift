@@ -10,6 +10,17 @@ import SwiftUI
     )
 }
 
+#Preview("Activity - Empty") {
+    let container = AppContainer.empty
+    ActivityView(
+        viewModel: ActivityViewModel(
+            repository: container.activity,
+            library: container.library
+        )
+    )
+}
+
+
 #Preview("Session Detail") {
     let container = AppContainer.preview
     let record = container.activity.records()[0]

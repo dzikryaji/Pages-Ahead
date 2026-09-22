@@ -34,12 +34,12 @@ struct CachedCoverImage<Placeholder: View>: View {
 }
 
 struct BookCover: View {
-    let book: Book
+    let book: Book?
     var width: CGFloat = 58
     private let onImageLoaded: (Data) -> Void
 
     init(
-        book: Book,
+        book: Book?,
         width: CGFloat = 58,
         onImageLoaded: @escaping (Data) -> Void = { _ in }
     ) {
@@ -52,31 +52,59 @@ struct BookCover: View {
         ZStack {
             RoundedRectangle(cornerRadius: width * 0.12)
                 .fill(AppTheme.coverGradient)
-            if let url = book.coverURL {
+
+            if let book, let url = book.coverURL {
                 CachedCoverImage(
                     url: url,
                     embeddedData: book.coverImageData,
                     onImageLoaded: onImageLoaded
-                ) { placeholder }
-            } else if let data = book.coverImageData, let image = UIImage(data: data) {
-                Image(uiImage: image).resizable().scaledToFill()
-            } else { placeholder }
-        }
-            .frame(width: width, height: width * 1.45).clipShape(RoundedRectangle(cornerRadius: width * 0.12))
-            .overlay {
-                RoundedRectangle(cornerRadius: width * 0.12)
-                    .stroke(.white.opacity(0.7), lineWidth: 0.5)
+                ) {
+                    placeholder
+                }
+            } else if let data = book?.coverImageData,
+                      let image = UIImage(data: data) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                placeholder
             }
-            .shadow(color: AppTheme.ink.opacity(0.18), radius: 6, y: 3)
-            .accessibilityLabel("Cover of \(book.title)")
+        }
+        .frame(width: width, height: width * 1.5)
+        .clipShape(
+            RoundedRectangle(cornerRadius: width * 0.12)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: width * 0.12)
+                .stroke(.white.opacity(0.7), lineWidth: 0.5)
+        }
+        .shadow(
+            color: AppTheme.accent.opacity(0.18),
+            radius: 6,
+            y: 3
+        )
+        .accessibilityLabel(
+            book.map { "Cover of \($0.title)" } ?? "Book cover"
+        )
     }
 
     private var placeholder: some View {
-        Text(book.title)
-            .font(.custom("BebasNeue-Regular", size: max(10, width * 0.15)))
+        Text(book?.title ?? "Reading session")
+            .font(
+                .custom(
+                    "BebasNeue-Regular",
+                    size: max(10, width * 0.15)
+                )
+            )
             .tracking(0.3)
-            .foregroundStyle(.white).lineLimit(4).padding(width * 0.12)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .foregroundStyle(.white)
+            .lineLimit(4)
+            .padding(width * 0.12)
+            .frame(
+                maxWidth: .infinity,
+                maxHeight: .infinity,
+                alignment: .topLeading
+            )
     }
 }
 
@@ -101,7 +129,7 @@ struct BookRow: View {
                     .font(AppTypography.subheadline)
                     .foregroundStyle(AppTheme.secondaryText)
                 if book.status == .reading {
-                    ProgressView(value: book.progress).tint(AppTheme.ink)
+                    ProgressView(value: book.progress).tint(AppTheme.accent)
                     Text("Page \(book.currentPage) of \(book.pageCount)")
                         .font(AppTypography.caption)
                         .foregroundStyle(AppTheme.secondaryText)

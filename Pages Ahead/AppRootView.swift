@@ -60,7 +60,7 @@ struct AppRootView: View {
                     .transition(.opacity)
             }
         }
-        .tint(AppTheme.ink)
+        .tint(AppTheme.accent)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: viewModel.route)
         .alert("Temporary storage in use", isPresented: $showingStartupError) {
             Button("Continue", role: .cancel) { }

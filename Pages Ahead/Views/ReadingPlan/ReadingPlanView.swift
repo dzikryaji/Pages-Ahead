@@ -143,7 +143,6 @@ struct ReadingPlanView: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text("READING PLAN")
                     .font(AppTypography.displayLarge)
-                    .tracking(0.5)
                 Text("Find the right time. Read for as long as you like.")
                     .font(AppTypography.subheadline)
                     .foregroundStyle(AppTheme.secondaryText)

@@ -31,12 +31,12 @@ struct SessionSummaryView: View {
                 VStack(spacing: 14) {
                     ZStack {
                         UnevenCircle()
-                            .stroke(AppTheme.ink, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                            .stroke(AppTheme.accent, style: StrokeStyle(lineWidth: 3, lineCap: .round))
                             .frame(width: 92, height: 92)
                             .rotationEffect(.degrees(ringRotation))
                         Image(systemName: "checkmark")
                             .font(.system(size: 34, weight: .bold))
-                            .foregroundStyle(AppTheme.ink)
+                            .foregroundStyle(AppTheme.accent)
                             .scaleEffect(checkScale)
                             .opacity(checkOpacity)
                     }

@@ -10,7 +10,7 @@ struct PrimaryButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity)
             .foregroundStyle(.white)
             .background(
-                AppTheme.ink.opacity(configuration.isPressed ? 0.82 : 1),
+                AppTheme.accent.opacity(configuration.isPressed ? 0.82 : 1),
                 in: Capsule(style: .continuous)
             )
             .opacity(isEnabled ? 1 : 0.45)

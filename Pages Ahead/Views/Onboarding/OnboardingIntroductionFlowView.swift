@@ -81,7 +81,7 @@ struct OnboardingIntroductionFlowView: View {
                         Circle()
                             .fill(
                                 page.page == currentPage
-                                    ? AppTheme.ink : AppTheme.border
+                                ? AppTheme.accent : AppTheme.accent.opacity(0.5)
                             )
                             .frame(width: 8, height: 8)
                             .scaleEffect(page.page == currentPage ? 1.35 : 1)
@@ -138,7 +138,7 @@ private struct IntroPageContent: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .font(AppTypography.displaySuperLarge)
             AppSymbol(systemName: page.symbol, size: 250)
-                .foregroundStyle(AppTheme.ink)
+                .foregroundStyle(AppTheme.accent)
                 .accessibilityHidden(true)
             Text(page.message)
                 .font(AppTypography.body)

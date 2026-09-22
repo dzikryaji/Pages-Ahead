@@ -108,7 +108,7 @@ struct OnboardingChoiceGroup<Value: Hashable>: View {
                         )
                         .foregroundStyle(
                             selection == value
-                                ? AppTheme.ink : AppTheme.tertiaryText
+                                ? AppTheme.accent : AppTheme.tertiaryText
                         )
                     }
                     .frame(minHeight: 44)
@@ -125,8 +125,8 @@ struct OnboardingChoiceGroup<Value: Hashable>: View {
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
                             .stroke(
                                 selection == value
-                                    ? AppTheme.ink
-                                    : AppTheme.border.opacity(0.4),
+                                    ? AppTheme.accent
+                                    : AppTheme.accent.opacity(0.4),
                                 lineWidth: selection == value ? 2 : 1
                             )
                     }
@@ -168,7 +168,7 @@ struct OnboardingWindowChoice: View {
                     )
                     .font(.system(size: 24))
                     .foregroundStyle(
-                        selected ? AppTheme.ink : AppTheme.tertiaryText
+                        selected ? AppTheme.accent : AppTheme.tertiaryText
                     )
                 }
                 Text(window.fitReason).font(AppTypography.caption)
@@ -188,7 +188,7 @@ struct OnboardingWindowChoice: View {
             .overlay {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .stroke(
-                        selected ? AppTheme.ink : AppTheme.border.opacity(0.4),
+                        selected ? AppTheme.accent : AppTheme.accent.opacity(0.4),
                         lineWidth: selected ? 2 : 1
                     )
             }

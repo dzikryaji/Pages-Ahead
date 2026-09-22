@@ -23,7 +23,7 @@ struct ReadingSessionBookPicker: View {
                         Spacer()
                         Image(systemName: selectedID == book.id ? "checkmark.circle.fill" : "circle")
                             .font(.title3)
-                            .foregroundStyle(selectedID == book.id ? AppTheme.ink : AppTheme.tertiaryText)
+                            .foregroundStyle(selectedID == book.id ? AppTheme.accent : AppTheme.tertiaryText)
                     }
                     .contentShape(.rect)
                 }

@@ -9,18 +9,39 @@ import SwiftUI
 
 enum AppTheme {
     static let background = Color("BackgroundColor")
-    static let ink = Color(red: 33 / 255, green: 33 / 255, blue: 33 / 255)
-    static let secondaryText = Color(red: 95 / 255, green: 95 / 255, blue: 95 / 255)
-    static let tertiaryText = Color(red: 112 / 255, green: 112 / 255, blue: 112 / 255)
-    static let border = Color(red: 133 / 255, green: 133 / 255, blue: 133 / 255)
+    static let accent = Color("AccentColor")
+    static let secondaryText = Color(
+        red: 95 / 255,
+        green: 95 / 255,
+        blue: 95 / 255
+    )
+    static let tertiaryText = Color(
+        red: 112 / 255,
+        green: 112 / 255,
+        blue: 112 / 255
+    )
     static let surface = Color.white
-    static let selectedSurface = ink.opacity(0.08)
+    static let selectedSurface = accent.opacity(0.08)
 
     static let coverGradient = LinearGradient(
-        colors: [ink, Color(red: 80 / 255, green: 80 / 255, blue: 80 / 255)],
+        colors: [
+            accent, Color(red: 80 / 255, green: 80 / 255, blue: 80 / 255),
+        ],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
+
+    static func configureSegmentedControlAppearance() {
+        UISegmentedControl.appearance().selectedSegmentTintColor = .black
+        UISegmentedControl.appearance().setTitleTextAttributes(
+            [.foregroundColor: UIColor.white],
+            for: .selected
+        )
+        UISegmentedControl.appearance().setTitleTextAttributes(
+            [.foregroundColor: UIColor.label],
+            for: .normal
+        )
+    }
 }
 
 enum AppTypography {
@@ -56,7 +77,11 @@ enum AppTypography {
         size: 18,
         relativeTo: .body
     )
-    static let bodyBold = Font.custom("Nunito-Bold", size: 18, relativeTo: .body)
+    static let bodyBold = Font.custom(
+        "Nunito-Bold",
+        size: 18,
+        relativeTo: .body
+    )
     static let description = Font.custom(
         "Nunito-Regular",
         size: 20,
@@ -84,12 +109,20 @@ private struct AppCardModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .background(
+                AppTheme.surface,
+                in: ConcentricRectangle(
+                    corners: .concentric(minimum: .fixed(cornerRadius)),
+                    isUniform: true
+                )
+            )
             .overlay {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(AppTheme.border.opacity(0.35), lineWidth: 1)
+                ConcentricRectangle(
+                    corners: .concentric(minimum: .fixed(cornerRadius)),
+                    isUniform: true
+                )
+                .stroke(AppTheme.accent, lineWidth: 1)
             }
-            .shadow(color: AppTheme.ink.opacity(0.07), radius: 10, y: 4)
     }
 }
 

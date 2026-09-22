@@ -7,7 +7,8 @@ import SwiftUI
 #Preview("Cached Cover Image") {
     CachedCoverImage(url: URL(string: "https://example.invalid/cover.jpg")!, embeddedData: nil) {
         AppTheme.coverGradient.overlay {
-            AppSymbol(systemName: "book.fill", size: 28)
+            Image(systemName: "book.fill")
+                .font(.system(size: 28))
                 .foregroundStyle(.white)
         }
     }
@@ -25,5 +26,5 @@ import SwiftUI
 }
 
 #Preview("Metric Card") {
-    MetricCard(value: "42", label: "Minutes", symbol: "clock.fill").padding().appBackground()
+    MetricCard(value: "42", label: "Minutes", symbol: "clock.fill").padding()
 }

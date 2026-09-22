@@ -23,7 +23,7 @@ struct OnboardingCompletionView: View {
             .frame(maxWidth:.infinity, alignment: .leading)
             Spacer()
             AppSymbol(systemName: "sun.max.fill", size: 250)
-                .foregroundStyle(AppTheme.ink)
+                .foregroundStyle(AppTheme.accent)
                 .rotationEffect(.degrees(rotation))
                 .frame(maxWidth: .infinity)
                 .accessibilityHidden(true)

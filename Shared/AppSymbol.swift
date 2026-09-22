@@ -47,38 +47,49 @@ enum HandDrawnSymbol {
         }
     }
 
-    static func uiImage(for systemName: String, pointSize: CGFloat = 24) -> UIImage? {
+    static func uiImage(for systemName: String, pointSize: CGFloat = 24)
+        -> UIImage?
+    {
         guard let assetName = assetName(for: systemName) else { return nil }
         let renderedKey = "\(assetName)-\(pointSize)" as NSString
         if let cached = renderedImageCache.object(forKey: renderedKey) {
             return cached
         }
 
-        guard let source = UIImage(named: assetName, in: .main, compatibleWith: nil) else {
+        guard
+            let source = UIImage(
+                named: assetName,
+                in: .main,
+                compatibleWith: nil
+            )
+        else {
             return nil
         }
 
         let targetSize = CGSize(width: pointSize, height: pointSize)
         let format = UIGraphicsImageRendererFormat()
         format.opaque = false
-        let rendered = UIGraphicsImageRenderer(size: targetSize, format: format).image { _ in
-            let padding = pointSize * 0.06
-            let availableSize = pointSize - padding * 2
-            let scale = min(
-                availableSize / source.size.width,
-                availableSize / source.size.height
-            )
-            let drawSize = CGSize(
-                width: source.size.width * scale,
-                height: source.size.height * scale
-            )
-            source.draw(in: CGRect(
-                x: (targetSize.width - drawSize.width) / 2,
-                y: (targetSize.height - drawSize.height) / 2,
-                width: drawSize.width,
-                height: drawSize.height
-            ))
-        }
+        let rendered = UIGraphicsImageRenderer(size: targetSize, format: format)
+            .image { _ in
+                let padding = pointSize * 0.06
+                let availableSize = pointSize - padding * 2
+                let scale = min(
+                    availableSize / source.size.width,
+                    availableSize / source.size.height
+                )
+                let drawSize = CGSize(
+                    width: source.size.width * scale,
+                    height: source.size.height * scale
+                )
+                source.draw(
+                    in: CGRect(
+                        x: (targetSize.width - drawSize.width) / 2,
+                        y: (targetSize.height - drawSize.height) / 2,
+                        width: drawSize.width,
+                        height: drawSize.height
+                    )
+                )
+            }
         renderedImageCache.setObject(rendered, forKey: renderedKey)
         return rendered
     }
@@ -139,11 +150,13 @@ struct AppContentUnavailableView: View {
             Label {
                 Text(title)
             } icon: {
-                AppSymbol(systemName: systemName, size: 48)
+                Image(systemName: systemName)
+                    .font(.system(size: 48))
             }
         } description: {
             Text(description)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

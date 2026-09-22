@@ -37,7 +37,7 @@ struct BookSelectionView: View {
                 .frame(minHeight: 44)
                 .padding(.horizontal, 12)
                 .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: 12))
-                .overlay { RoundedRectangle(cornerRadius: 12).stroke(AppTheme.border) }
+                .overlay { RoundedRectangle(cornerRadius: 12).stroke(AppTheme.accent) }
 
                 content
             }
@@ -97,7 +97,7 @@ struct BookSelectionView: View {
                     Spacer()
                     Image(systemName: selected ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 22))
-                        .foregroundStyle(selected ? AppTheme.ink : AppTheme.tertiaryText)
+                        .foregroundStyle(selected ? AppTheme.accent : AppTheme.tertiaryText)
                 }
                 .contentShape(Rectangle())
             }

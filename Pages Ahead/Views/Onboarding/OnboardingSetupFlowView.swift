@@ -116,7 +116,7 @@ struct OnboardingSetupFlowView: View {
         HStack(spacing: 10) {
             ForEach(1...4, id: \.self) { index in
                 Capsule()
-                    .fill(index <= step ? AppTheme.ink : AppTheme.border)
+                    .fill(index <= step ? AppTheme.accent : AppTheme.accent.opacity(0.5))
                     .frame(height: 5)
                     .opacity(index <= step ? 1 : 0.65)
             }
@@ -220,7 +220,7 @@ struct OnboardingSetupFlowView: View {
         VStack(alignment: .leading) {
             Spacer()
             AppSymbol(systemName: "onboarding.location", size: 250)
-                .foregroundStyle(AppTheme.ink)
+                .foregroundStyle(AppTheme.accent)
                 .frame(maxWidth: .infinity)
             if let error = viewModel.locationError {
                 Text(error)

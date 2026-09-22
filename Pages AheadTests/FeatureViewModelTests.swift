@@ -190,6 +190,61 @@ struct FeatureViewModelTests {
         #expect(viewModel.insight.contains("20 minutes longer"))
     }
 
+    @Test func activityRangesUseMondayWeekAndCalendarMonth() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let date: (Int, Int, Int) -> Date = { year, month, day in
+            calendar.date(from: DateComponents(year: year, month: month, day: day, hour: 12))!
+        }
+        let bookID = UUID()
+        let records = [
+            date(2026, 8, 31),
+            date(2026, 9, 13),
+            date(2026, 9, 14),
+            date(2026, 9, 20),
+            date(2026, 9, 21),
+            date(2026, 10, 1)
+        ].map {
+            ReadingRecord(
+                id: UUID(), bookID: bookID, date: $0,
+                minutes: 10, pages: 5, weather: "Clear"
+            )
+        }
+        let viewModel = ActivityViewModel(
+            repository: InMemoryActivityRepository(bookID: bookID, records: records),
+            library: InMemoryLibraryRepository(books: []),
+            dateProvider: FixedDateProvider(now: date(2026, 9, 16)),
+            calendar: calendar
+        )
+
+        #expect(viewModel.records(for: .week).map(\.date) == [date(2026, 9, 20), date(2026, 9, 14)])
+        #expect(viewModel.records(for: .month).map(\.date) == [
+            date(2026, 9, 21), date(2026, 9, 20), date(2026, 9, 14), date(2026, 9, 13)
+        ])
+        #expect(viewModel.records(for: .allTime).count == 6)
+    }
+
+    @Test func activityBookLookupUsesReloadedCache() {
+        let book = SampleData.books[0]
+        let record = ReadingRecord(
+            id: UUID(), bookID: book.id, date: .now,
+            minutes: 10, pages: 5, weather: "Clear"
+        )
+        let library = CountingLibraryRepository(books: [book])
+        let viewModel = ActivityViewModel(
+            repository: InMemoryActivityRepository(records: [record]),
+            library: library
+        )
+
+        #expect(viewModel.book(for: record)?.id == book.id)
+        #expect(viewModel.book(for: record)?.title == book.title)
+        #expect(library.booksCallCount == 1)
+
+        viewModel.reload()
+
+        #expect(library.booksCallCount == 2)
+    }
+
     @Test func weatherProviderUsesNextAvailableSource() async throws {
         let candidate = HourlyWeatherSnapshot(date: .now.addingTimeInterval(3_600), temperature: 25, condition: "Clear", symbolName: "sun.max.fill")
         let chain = FallbackWeatherProvider(providers: [FailingWeatherProvider(), FixedWeatherProvider(candidate: candidate)])
@@ -373,6 +428,31 @@ private final class FixedBookCoverLoader: BookCoverImageLoading {
     func data(for url: URL, embeddedData: Data?) async throws -> Data {
         callCount += 1
         return data
+    }
+}
+
+private final class CountingLibraryRepository: LibraryRepository {
+    private var storedBooks: [Book]
+    private(set) var booksCallCount = 0
+
+    init(books: [Book]) {
+        storedBooks = books
+    }
+
+    func books() -> [Book] {
+        booksCallCount += 1
+        return storedBooks
+    }
+
+    func add(_ book: Book) {
+        storedBooks.append(book)
+    }
+
+    func update(_ book: Book) {
+        guard let index = storedBooks.firstIndex(where: { $0.id == book.id }) else {
+            return
+        }
+        storedBooks[index] = book
     }
 }
 
