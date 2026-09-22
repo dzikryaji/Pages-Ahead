@@ -21,6 +21,8 @@ struct ActivityView: View {
                     //                        }
                     //                        .glassEffect(.regular.interactive(), in: .circle)
                 }
+                .padding(.horizontal)
+                
                 Picker("Range", selection: $viewModel.range) {
                     ForEach(ActivityRange.allCases) { range in
                         Text(range.rawValue).tag(range)
@@ -28,6 +30,7 @@ struct ActivityView: View {
                 }
                 .pickerStyle(.segmented)
                 .padding(.top, 12)
+                .padding(.horizontal)
 
                 TabView(selection: $viewModel.range) {
                     ForEach(ActivityRange.allCases) { range in
@@ -39,7 +42,7 @@ struct ActivityView: View {
             }
             .padding(.top, 58)
             .padding(.bottom)
-            .padding(.horizontal)
+//            .padding(.horizontal)
             .appBackground()
             .navigationDestination(for: ReadingRecord.self) { record in
                 SessionDetailView(
@@ -82,8 +85,7 @@ struct ActivityView: View {
         } else {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 12) {
-                    Text(viewModel.periodTitle(for: range))
-                        .font(AppTypography.displaySection)
+            s
 
                     if dynamicTypeSize.isAccessibilitySize {
                         VStack(spacing: 10) { metricCards(for: range) }
@@ -106,6 +108,7 @@ struct ActivityView: View {
                     }
                 }
                 .padding(.vertical, 12)
+                .padding(.horizontal)
             }
         }
     }

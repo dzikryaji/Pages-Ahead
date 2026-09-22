@@ -36,8 +36,12 @@ struct ActivityCard: View {
                     .font(AppTypography.subheadline)
                     .foregroundStyle(AppTheme.secondaryText)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-            
+            .frame(
+                maxWidth: .infinity,
+                maxHeight: .infinity,
+                alignment: .leading
+            )
+
             Image(systemName: "chevron.right")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -69,5 +73,19 @@ struct MetricCard: View {
         .appCard(cornerRadius: 12)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(label): \(value)")
+    }
+}
+
+struct DetailRow<Content: View>: View {
+    let label: String
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        HStack {
+            Text(label)
+            Spacer()
+            content()
+        }
+        .frame(minHeight: 34)
     }
 }

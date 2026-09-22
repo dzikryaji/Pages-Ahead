@@ -394,6 +394,84 @@ struct FeatureViewModelTests {
         #expect(callCount == 1)
     }
 
+    @Test func duplicateBookAddsShareOneCoverLoad() async throws {
+        let coverData = Data([1, 2, 3, 4])
+        let repository = InMemoryLibraryRepository()
+        let loader = DelayedBookCoverLoader(
+            data: coverData,
+            delay: .milliseconds(50)
+        )
+        let viewModel = LibraryViewModel(
+            repository: repository,
+            coverImages: loader
+        )
+        var book = SampleData.books[0]
+        book.coverURL = URL(string: "https://example.com/cover.jpg")
+        book.coverImageData = nil
+
+        viewModel.add(book)
+        viewModel.add(book)
+        try await Task.sleep(for: .milliseconds(100))
+
+        #expect(loader.callCount == 1)
+        #expect(repository.books().first?.coverImageData == coverData)
+    }
+
+    @Test func newerEmbeddedCoverWinsOverPendingDownload() async throws {
+        let downloadedData = Data([1, 2, 3, 4])
+        let embeddedData = Data([9, 8, 7, 6])
+        let repository = InMemoryLibraryRepository()
+        let loader = DelayedBookCoverLoader(
+            data: downloadedData,
+            delay: .milliseconds(100)
+        )
+        let viewModel = LibraryViewModel(
+            repository: repository,
+            coverImages: loader
+        )
+        var book = SampleData.books[0]
+        book.coverURL = URL(string: "https://example.com/cover.jpg")
+        book.coverImageData = nil
+
+        viewModel.add(book)
+        book.coverImageData = embeddedData
+        viewModel.update(book)
+        try await Task.sleep(for: .milliseconds(150))
+
+        #expect(repository.books().first?.coverImageData == embeddedData)
+    }
+
+    @Test func staleCoverCallbackCannotMutateNewQueryResults() async {
+        let cache = InMemoryCatalogSearchCache()
+        var firstResult = SampleData.books[0]
+        firstResult.coverImageData = nil
+        var secondResult = firstResult
+        secondResult.coverImageData = nil
+        cache.save([firstResult], for: "first", fetchedAt: .now)
+        cache.save([secondResult], for: "second", fetchedAt: .now)
+        let viewModel = CatalogSearchViewModel(
+            catalog: CatalogSpy(),
+            cache: cache
+        )
+
+        viewModel.queryChanged(to: "first")
+        viewModel.queryChanged(to: "second")
+        let coverData = Data([1, 2, 3, 4])
+        viewModel.coverLoaded(
+            coverData,
+            for: firstResult.id,
+            query: "first"
+        )
+
+        guard case .loaded(let visibleBooks) = viewModel.state else {
+            Issue.record("Expected second cached query")
+            return
+        }
+        #expect(visibleBooks.first?.coverImageData == nil)
+        #expect(cache.results(for: "first")?.books.first?.coverImageData == coverData)
+        #expect(cache.results(for: "second")?.books.first?.coverImageData == nil)
+    }
+
     @Test func firstCatalogCharacterIsImmediateAndNewQueryCancelsOldWork() async throws {
         let catalog = CatalogSpy(delay: .milliseconds(300))
         let viewModel = CatalogSearchViewModel(catalog: catalog, cache: InMemoryCatalogSearchCache())
@@ -427,6 +505,24 @@ private final class FixedBookCoverLoader: BookCoverImageLoading {
 
     func data(for url: URL, embeddedData: Data?) async throws -> Data {
         callCount += 1
+        return data
+    }
+}
+
+@MainActor
+private final class DelayedBookCoverLoader: BookCoverImageLoading {
+    let data: Data
+    let delay: Duration
+    private(set) var callCount = 0
+
+    init(data: Data, delay: Duration) {
+        self.data = data
+        self.delay = delay
+    }
+
+    func data(for url: URL, embeddedData: Data?) async throws -> Data {
+        callCount += 1
+        try await Task.sleep(for: delay)
         return data
     }
 }

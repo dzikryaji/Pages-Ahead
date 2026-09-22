@@ -2,6 +2,11 @@ import SwiftUI
 import UIKit
 
 struct CachedCoverImage<Placeholder: View>: View {
+    private struct RequestID: Hashable {
+        let url: URL
+        let embeddedData: Data?
+    }
+
     let url: URL
     let embeddedData: Data?
     let onImageLoaded: (Data) -> Void
@@ -22,13 +27,27 @@ struct CachedCoverImage<Placeholder: View>: View {
 
     var body: some View {
         Group {
-            if let image { Image(uiImage: image).resizable().scaledToFill() }
-            else { placeholder() }
+            if let image {
+                Image(uiImage: image).resizable().scaledToFill()
+            } else {
+                placeholder()
+            }
         }
-        .task(id: url) {
-            guard let data = try? await CoverImageCache.shared.data(for: url, embeddedData: embeddedData) else { return }
-            image = UIImage(data: data)
-            onImageLoaded(data)
+        .task(id: RequestID(url: url, embeddedData: embeddedData)) {
+            image = nil
+            do {
+                let data = try await CoverImageCache.shared.data(
+                    for: url,
+                    embeddedData: embeddedData
+                )
+                try Task.checkCancellation()
+                guard let loadedImage = UIImage(data: data) else { return }
+                image = loadedImage
+                try Task.checkCancellation()
+                onImageLoaded(data)
+            } catch {
+                // Keep placeholder visible for cancellation and failed loads.
+            }
         }
     }
 }
@@ -62,7 +81,8 @@ struct BookCover: View {
                     placeholder
                 }
             } else if let data = book?.coverImageData,
-                      let image = UIImage(data: data) {
+                let image = UIImage(data: data)
+            {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
@@ -110,33 +130,45 @@ struct BookCover: View {
 
 struct BookRow: View {
     let book: Book
+    let systemImage: String?
     private let onCoverLoaded: (Data) -> Void
 
     init(
         book: Book,
+        systemImage: String?,
         onCoverLoaded: @escaping (Data) -> Void = { _ in }
     ) {
         self.book = book
+        self.systemImage = systemImage
         self.onCoverLoaded = onCoverLoaded
     }
 
     var body: some View {
-        HStack(spacing: 14) {
-            BookCover(book: book, onImageLoaded: onCoverLoaded)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(book.title).font(AppTypography.bodyBold)
+        HStack(alignment: .top, spacing: 10) {
+            BookCover(book: book, width: 75, onImageLoaded: onCoverLoaded)
+            VStack(alignment: .leading, spacing: 12) {
+                Text(book.title).font(AppTypography.displaySection)
+
                 Text(book.author)
                     .font(AppTypography.subheadline)
-                    .foregroundStyle(AppTheme.secondaryText)
+
                 if book.status == .reading {
                     ProgressView(value: book.progress).tint(AppTheme.accent)
                     Text("Page \(book.currentPage) of \(book.pageCount)")
                         .font(AppTypography.caption)
+                }
+
+                if let systemImage {
+                    Image(systemName: systemImage)
+                        .font(.footnote.weight(.semibold))
                         .foregroundStyle(AppTheme.secondaryText)
                 }
+
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.vertical, 4)
+        .padding()
+        .appCard()
         .accessibilityElement(children: .combine)
     }
 }

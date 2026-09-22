@@ -68,13 +68,20 @@ final class CatalogSearchViewModel {
     }
 
     func coverLoaded(_ data: Data, for bookID: UUID) {
+        coverLoaded(data, for: bookID, query: query)
+    }
+
+    func coverLoaded(_ data: Data, for bookID: UUID, query resultQuery: String) {
+        cache.saveCoverImage(data, for: bookID, query: resultQuery)
+        guard resultQuery.normalizedCacheKey == query.normalizedCacheKey else {
+            return
+        }
         guard case .loaded(var books) = state,
               let index = books.firstIndex(where: { $0.id == bookID }),
               books[index].coverImageData == nil else { return }
         books[index].coverImageData = data
         state = .loaded(books)
         if selected?.id == bookID { selected?.coverImageData = data }
-        cache.saveCoverImage(data, for: bookID, query: query)
     }
 
     func cancelSearch() {

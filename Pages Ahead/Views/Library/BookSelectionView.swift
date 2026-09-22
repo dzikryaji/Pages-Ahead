@@ -89,11 +89,18 @@ struct BookSelectionView: View {
     }
 
     private func bookList(_ books: [Book]) -> some View {
-        List(books) { book in
+        let resultQuery = search.query
+        return List(books) { book in
             let selected = selectedBooks.contains(where: { $0.id == book.id })
             Button { toggle(book) } label: {
                 HStack(spacing: 12) {
-                    BookRow(book: book) { data in search.coverLoaded(data, for: book.id) }
+                    BookRow(book: book) { data in
+                        coverLoaded(
+                            data,
+                            for: book.id,
+                            resultQuery: resultQuery
+                        )
+                    }
                     Spacer()
                     Image(systemName: selected ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 22))
@@ -114,5 +121,16 @@ struct BookSelectionView: View {
         } else {
             selectedBooks.append(book)
         }
+    }
+
+    private func coverLoaded(
+        _ data: Data,
+        for bookID: UUID,
+        resultQuery: String
+    ) {
+        search.coverLoaded(data, for: bookID, query: resultQuery)
+        guard let index = selectedBooks.firstIndex(where: { $0.id == bookID }),
+              selectedBooks[index].coverImageData == nil else { return }
+        selectedBooks[index].coverImageData = data
     }
 }

@@ -28,56 +28,117 @@ struct SessionDetailView: View {
     }
 
     private var editIsValid: Bool {
-        editMinutes >= 0 &&
-        editLastPage >= record.startingPage &&
-        editLastPage <= (book?.pageCount ?? Int.max)
+        editMinutes >= 0 && editLastPage >= record.startingPage
+            && editLastPage <= (book?.pageCount ?? Int.max)
     }
 
     var body: some View {
-        List {
+        VStack(alignment: .leading, spacing: 16) {
             if let book {
-                Section("Book") { BookRow(book: book) }
+                BookRow(book: book)
             }
-            Section("Session") {
-                LabeledContent(
-                    "Date",
-                    value: record.date.formatted(date: .abbreviated, time: .shortened)
-                )
+
+            Text("Session")
+                .font(AppTypography.displaySection)
+
+            VStack(spacing: 12) {
+                DetailRow(label: "Date") {
+                    Text(
+                        record.date.formatted(
+                            date: .abbreviated,
+                            time: .shortened
+                        )
+                    )
+                    .foregroundStyle(.secondary)
+                }
+
+                Divider()
+
                 if editing {
-                    LabeledContent("Duration") {
-                        HStack {
-                            TextField("Minutes", value: $editMinutes, format: .number)
-                                .keyboardType(.numberPad)
-                                .multilineTextAlignment(.trailing)
-                            Text("min").foregroundStyle(.secondary)
-                        }
-                    }
-                    LabeledContent("Last Page") {
-                        TextField("Last Page", value: $editLastPage, format: .number)
+                    DetailRow(label: "Duration") {
+                        HStack(spacing: 4) {
+                            TextField(
+                                "Minutes",
+                                value: $editMinutes,
+                                format: .number
+                            )
                             .keyboardType(.numberPad)
                             .multilineTextAlignment(.trailing)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 80)
+                            Text("min")
+                                .foregroundStyle(.secondary)
+                        }
                     }
+
+                    Divider()
+
+                    DetailRow(label: "Last Page") {
+                        TextField("Page", value: $editLastPage, format: .number)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 80)
+                            .overlay {
+                                if !editIsValid {
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .stroke(.red, lineWidth: 1)
+                                }
+                            }
+                    }
+
                     if !editIsValid {
-                        Text("Last Page must be between \(record.startingPage) and \(book?.pageCount ?? record.lastPage).")
-                            .font(.footnote)
-                            .foregroundStyle(.red)
+                        Text(
+                            "Enter a page between \(record.startingPage) and \(book?.pageCount ?? record.lastPage)."
+                        )
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 } else {
-                    LabeledContent("Duration", value: record.durationText)
-                    LabeledContent("Pages Read", value: "\(record.pages)")
-                    LabeledContent("Last Page", value: "\(record.lastPage)")
+                    DetailRow(label: "Duration") {
+                        Text("\(record.minutes) min").foregroundStyle(
+                            .secondary
+                        )
+                    }
+
+                    Divider()
+
+                    DetailRow(label: "Last Page") {
+                        Text("\(record.lastPage)").foregroundStyle(.secondary)
+                    }
                 }
-                LabeledContent("Weather", value: record.weather)
+
+                Divider()
+
+                DetailRow(label: "Pages Read") {
+                    Text("\(record.pages)").foregroundStyle(.secondary)
+                }
+
+                Divider()
+
+                DetailRow(label: "Weather") {
+                    Text(record.weather).foregroundStyle(.secondary)
+                }
             }
-            Section {
-                Button("Delete Session", role: .destructive) { confirmingDelete = true }
+            .padding()
+            .appCard()
+
+            Spacer()
+
+            Button("Delete Session", role: .destructive) {
+                confirmingDelete = true
             }
+            .frame(maxWidth: .infinity)
+            .font(AppTypography.displaySection)
         }
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .appBackground()
         .navigationTitle("Session Detail")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            Button(editing ? "Done" : "Edit") {
+            Button {
                 if editing {
                     guard editIsValid else { return }
                     let updated = record.with(
@@ -94,6 +155,10 @@ struct SessionDetailView: View {
                     editLastPage = record.lastPage
                 }
                 editing.toggle()
+            } label: {
+                Image(
+                    systemName: editing ? "checkmark" : "pencil"
+                )
             }
             .disabled(editing && !editIsValid)
         }
@@ -102,12 +167,12 @@ struct SessionDetailView: View {
                 viewModel.delete(record)
                 dismiss()
             }
-            Button("Cancel", role: .cancel) { }
+            Button("Cancel", role: .cancel) {}
         } message: {
             Text("Book progress may rewind when this is the latest session.")
         }
         .alert("Couldn’t Save Changes", isPresented: $showingError) {
-            Button("OK", role: .cancel) { }
+            Button("OK", role: .cancel) {}
         } message: {
             Text(viewModel.errorMessage ?? "Try again.")
         }
