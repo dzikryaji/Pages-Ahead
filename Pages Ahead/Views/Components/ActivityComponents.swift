@@ -17,7 +17,7 @@ struct ActivityCard: View {
 
             VStack(alignment: .leading, spacing: 0) {
                 Text(book?.title ?? "Reading session")
-                    .font(AppTypography.bodyBold)
+                    .font(AppTypography.displaySection)
                     .padding(.bottom, 12)
 
                 Text(
@@ -43,6 +43,7 @@ struct ActivityCard: View {
             )
 
             Image(systemName: "chevron.right")
+                .font(.system(size: 20))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()

@@ -85,8 +85,6 @@ struct ActivityView: View {
         } else {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 12) {
-            s
-
                     if dynamicTypeSize.isAccessibilitySize {
                         VStack(spacing: 10) { metricCards(for: range) }
                     } else {

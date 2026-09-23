@@ -135,7 +135,7 @@ struct BookRow: View {
 
     init(
         book: Book,
-        systemImage: String?,
+        systemImage: String? = nil,
         onCoverLoaded: @escaping (Data) -> Void = { _ in }
     ) {
         self.book = book
@@ -144,7 +144,7 @@ struct BookRow: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .center, spacing: 10) {
             BookCover(book: book, width: 75, onImageLoaded: onCoverLoaded)
             VStack(alignment: .leading, spacing: 12) {
                 Text(book.title).font(AppTypography.displaySection)
@@ -152,21 +152,21 @@ struct BookRow: View {
                 Text(book.author)
                     .font(AppTypography.subheadline)
 
-                if book.status == .reading {
+                if book.currentPage != 0 {
                     ProgressView(value: book.progress).tint(AppTheme.accent)
                     Text("Page \(book.currentPage) of \(book.pageCount)")
                         .font(AppTypography.caption)
                 }
 
-                if let systemImage {
-                    Image(systemName: systemImage)
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(AppTheme.secondaryText)
-                }
-
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity,maxHeight: .infinity, alignment: .leading)
+            
+            if let systemImage {
+                Image(systemName: systemImage)
+                    .font(.system(size: 20))
+            }
         }
+        .frame(minHeight: 112, maxHeight: 112)
         .padding()
         .appCard()
         .accessibilityElement(children: .combine)
