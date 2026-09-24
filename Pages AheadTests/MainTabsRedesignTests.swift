@@ -90,6 +90,89 @@ struct MainTabsRedesignTests {
         #expect(library.books().first?.currentPage == 80)
     }
 
+    @Test func bookHasPartialProgressOnlyBetweenStartAndFinish() {
+        var book = Book(
+            id: UUID(), title: "Test", author: "Reader", edition: "", isbn: "",
+            pageCount: 100, status: .saved, currentPage: 0
+        )
+
+        #expect(!book.hasPartialProgress)
+        book.currentPage = 40
+        #expect(book.hasPartialProgress)
+        book.currentPage = 100
+        #expect(!book.hasPartialProgress)
+    }
+
+    @Test func coordinatorRestoresLatestPartialPageWhenLeavingFinished() {
+        let bookID = UUID()
+        let activity = InMemoryActivityRepository(records: [
+            ReadingRecord(
+                id: UUID(), bookID: bookID, date: Date(timeIntervalSince1970: 2),
+                durationSeconds: 600, startingPage: 20, lastPage: 70, weather: "Clear"
+            ),
+            ReadingRecord(
+                id: UUID(), bookID: bookID, date: Date(timeIntervalSince1970: 1),
+                durationSeconds: 600, startingPage: 0, lastPage: 100, weather: "Clear"
+            )
+        ])
+        let coordinator = ReadingSessionCoordinator(
+            library: InMemoryLibraryRepository(books: []), activity: activity,
+            readingPlans: InMemoryReadingPlanRepository(),
+            progressStore: InMemorySessionProgressRepository(),
+            activityManager: PreviewReadingActivityManager(),
+            notifications: PreviewNotificationScheduler(),
+            calendarWriter: PreviewCalendarWriter()
+        )
+
+        #expect(coordinator.restoredPageWhenLeavingFinished(bookID: bookID, pageCount: 100) == 70)
+
+        let finishedBook = Book(
+            id: bookID, title: "Test", author: "Reader", edition: "", isbn: "",
+            pageCount: 100, status: .finished, currentPage: 100
+        )
+        #expect(coordinator.pageAfterStatusChange(for: finishedBook, to: .saved) == 70)
+    }
+
+    @Test func coordinatorResetsPageWhenLatestSessionReachedEndOrDoesNotExist() {
+        let bookID = UUID()
+        let activity = InMemoryActivityRepository(records: [
+            ReadingRecord(
+                id: UUID(), bookID: bookID, date: .now, durationSeconds: 600,
+                startingPage: 70, lastPage: 100, weather: "Clear"
+            )
+        ])
+        let coordinator = ReadingSessionCoordinator(
+            library: InMemoryLibraryRepository(books: []), activity: activity,
+            readingPlans: InMemoryReadingPlanRepository(),
+            progressStore: InMemorySessionProgressRepository(),
+            activityManager: PreviewReadingActivityManager(),
+            notifications: PreviewNotificationScheduler(),
+            calendarWriter: PreviewCalendarWriter()
+        )
+
+        #expect(coordinator.restoredPageWhenLeavingFinished(bookID: bookID, pageCount: 100) == 0)
+        #expect(coordinator.restoredPageWhenLeavingFinished(bookID: UUID(), pageCount: 100) == 0)
+    }
+
+    @Test func coordinatorPreservesPageUnlessEnteringOrLeavingFinished() {
+        let coordinator = ReadingSessionCoordinator(
+            library: InMemoryLibraryRepository(books: []),
+            activity: InMemoryActivityRepository(records: []),
+            readingPlans: InMemoryReadingPlanRepository(),
+            progressStore: InMemorySessionProgressRepository(),
+            activityManager: PreviewReadingActivityManager(),
+            notifications: PreviewNotificationScheduler(),
+            calendarWriter: PreviewCalendarWriter()
+        )
+        let book = Book(
+            id: UUID(), title: "Test", author: "Reader", edition: "", isbn: "",
+            pageCount: 100, status: .reading, currentPage: 40
+        )
+
+        #expect(coordinator.pageAfterStatusChange(for: book, to: .saved) == 40)
+        #expect(coordinator.pageAfterStatusChange(for: book, to: .finished) == 100)
+    }
+
     @Test func coordinatorRestoresRunningSessionAndRejectsSecondStart() {
         let book = SampleData.books[0]
         let started = Date(timeIntervalSince1970: 10_000)

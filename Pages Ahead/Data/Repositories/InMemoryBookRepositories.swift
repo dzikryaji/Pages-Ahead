@@ -6,6 +6,7 @@ final class InMemoryLibraryRepository: LibraryRepository {
     func books() -> [Book] { storage }
     func add(_ book: Book) { guard !storage.contains(where: { $0.id == book.id }) else { return }; storage.append(book) }
     func update(_ book: Book) { guard let index = storage.firstIndex(where: { $0.id == book.id }) else { return }; storage[index] = book }
+    func delete(id: UUID) { storage.removeAll { $0.id == id } }
 }
 
 @MainActor

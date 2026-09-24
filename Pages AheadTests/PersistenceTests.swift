@@ -36,6 +36,28 @@ struct PersistenceTests {
         #expect(repository.books().count == 1)
     }
 
+    @Test func bookCanBeDeletedWithoutRemovingReadingHistory() throws {
+        let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(
+            for: StoredBook.self, StoredReadingRecord.self,
+            StoredReadingPlan.self, StoredPersonalizationEvent.self,
+            configurations: configuration
+        )
+        let repository = SwiftDataLibraryRepository(context: container.mainContext)
+        let activity = SwiftDataActivityRepository(context: container.mainContext)
+        let book = SampleData.books[0]
+        repository.add(book)
+        activity.save(ReadingRecord(
+            id: UUID(), bookID: book.id, date: .now, durationSeconds: 600,
+            startingPage: 0, lastPage: 20, weather: "Clear"
+        ))
+
+        repository.delete(id: book.id)
+
+        #expect(repository.books().isEmpty)
+        #expect(activity.records().count == 1)
+    }
+
     @Test func catalogResultsAndCoverImageSurviveNewRepositoryInstance() throws {
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: StoredCatalogEntry.self, configurations: configuration)

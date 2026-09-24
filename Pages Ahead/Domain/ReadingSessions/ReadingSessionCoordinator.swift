@@ -4,6 +4,7 @@ import Observation
 @MainActor @Observable
 final class ReadingSessionCoordinator {
     private let library: LibraryRepository
+    private let activity: ActivityRepository
     private let readingPlans: ReadingPlanRepository
     private let progressStore: SessionProgressRepository
     private let activityManager: ReadingActivityManaging
@@ -26,6 +27,7 @@ final class ReadingSessionCoordinator {
         dateProvider: DateProviding? = nil
     ) {
         self.library = library
+        self.activity = activity
         self.readingPlans = readingPlans
         self.progressStore = progressStore
         self.activityManager = activityManager
@@ -47,6 +49,29 @@ final class ReadingSessionCoordinator {
     var isPresented: Bool { session != nil }
     var isPaused: Bool { session?.phase == .paused }
     var isShowingSummary: Bool { session?.phase == .summary }
+
+    func restoredPageWhenLeavingFinished(bookID: UUID, pageCount: Int) -> Int {
+        guard pageCount > 0,
+              let lastPage = activity.records()
+                .filter({ $0.bookID == bookID })
+                .max(by: { $0.date < $1.date })?
+                .lastPage else {
+            return 0
+        }
+        let clampedPage = min(max(0, lastPage), pageCount)
+        return clampedPage == pageCount ? 0 : clampedPage
+    }
+
+    func pageAfterStatusChange(for book: Book, to status: ReadingStatus) -> Int {
+        if status == .finished { return book.pageCount }
+        if book.status == .finished {
+            return restoredPageWhenLeavingFinished(
+                bookID: book.id,
+                pageCount: book.pageCount
+            )
+        }
+        return book.currentPage
+    }
 
     @discardableResult
     func start(

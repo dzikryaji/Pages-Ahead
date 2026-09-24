@@ -4,6 +4,7 @@ protocol LibraryRepository: AnyObject {
     func books() -> [Book]
     func add(_ book: Book)
     func update(_ book: Book)
+    func delete(id: UUID)
 }
 
 protocol ReadingWindowRepository {

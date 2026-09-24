@@ -394,6 +394,17 @@ struct FeatureViewModelTests {
         #expect(callCount == 1)
     }
 
+    @Test func deletingBookRemovesItFromLibrary() {
+        let book = SampleData.books[0]
+        let repository = InMemoryLibraryRepository(books: [book])
+        let viewModel = LibraryViewModel(repository: repository)
+
+        viewModel.delete(book)
+
+        #expect(repository.books().isEmpty)
+        #expect(viewModel.books.isEmpty)
+    }
+
     @Test func duplicateBookAddsShareOneCoverLoad() async throws {
         let coverData = Data([1, 2, 3, 4])
         let repository = InMemoryLibraryRepository()
@@ -549,6 +560,10 @@ private final class CountingLibraryRepository: LibraryRepository {
             return
         }
         storedBooks[index] = book
+    }
+
+    func delete(id: UUID) {
+        storedBooks.removeAll { $0.id == id }
     }
 }
 

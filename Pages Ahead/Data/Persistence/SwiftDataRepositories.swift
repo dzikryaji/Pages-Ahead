@@ -68,6 +68,14 @@ final class SwiftDataLibraryRepository: LibraryRepository {
         stored.update(from: book); save()
     }
 
+    func delete(id: UUID) {
+        var descriptor = FetchDescriptor<StoredBook>(predicate: #Predicate { $0.id == id })
+        descriptor.fetchLimit = 1
+        guard let stored = try? context.fetch(descriptor).first else { return }
+        context.delete(stored)
+        save()
+    }
+
     private func save() { try? context.save() }
 }
 

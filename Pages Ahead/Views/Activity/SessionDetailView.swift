@@ -33,104 +33,106 @@ struct SessionDetailView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 20) {
             if let book {
                 BookRow(book: book)
             }
 
-            Text("Session")
-                .font(AppTypography.displaySection)
-
-            VStack(spacing: 12) {
-                DetailRow(label: "Date") {
-                    Text(
-                        record.date.formatted(
-                            date: .abbreviated,
-                            time: .shortened
-                        )
-                    )
-                    .foregroundStyle(.secondary)
-                }
-
-                Divider()
-
-                if editing {
-                    DetailRow(label: "Duration") {
-                        HStack(spacing: 4) {
-                            TextField(
-                                "Minutes",
-                                value: $editMinutes,
-                                format: .number
+            VStack (alignment: .leading, spacing: 8) {
+                Text("Session Information")
+                    .font(AppTypography.displaySection)
+                
+                VStack(spacing: 12) {
+                    DetailRow(label: "Date") {
+                        Text(
+                            record.date.formatted(
+                                date: .abbreviated,
+                                time: .shortened
                             )
-                            .keyboardType(.numberPad)
-                            .multilineTextAlignment(.trailing)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(width: 80)
-                            Text("min")
-                                .foregroundStyle(.secondary)
+                        )
+                        .foregroundStyle(.secondary)
+                    }
+                    
+                    Divider()
+                    
+                    if editing {
+                        DetailRow(label: "Duration") {
+                            HStack(spacing: 4) {
+                                TextField(
+                                    "Minutes",
+                                    value: $editMinutes,
+                                    format: .number
+                                )
+                                .keyboardType(.numberPad)
+                                .multilineTextAlignment(.trailing)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(width: 80)
+                                Text("min")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        
+                        Divider()
+                        
+                        DetailRow(label: "Last Page") {
+                            TextField("Page", value: $editLastPage, format: .number)
+                                .keyboardType(.numberPad)
+                                .multilineTextAlignment(.trailing)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(width: 80)
+                                .overlay {
+                                    if !editIsValid {
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .stroke(.red, lineWidth: 1)
+                                    }
+                                }
+                        }
+                        
+                        if !editIsValid {
+                            Text(
+                                "Enter a page between \(record.startingPage) and \(book?.pageCount ?? record.lastPage)."
+                            )
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    } else {
+                        DetailRow(label: "Duration") {
+                            Text("\(record.minutes) min").foregroundStyle(
+                                .secondary
+                            )
+                        }
+                        
+                        Divider()
+                        
+                        DetailRow(label: "Last Page") {
+                            Text("\(record.lastPage)").foregroundStyle(.secondary)
                         }
                     }
-
+                    
                     Divider()
-
-                    DetailRow(label: "Last Page") {
-                        TextField("Page", value: $editLastPage, format: .number)
-                            .keyboardType(.numberPad)
-                            .multilineTextAlignment(.trailing)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(width: 80)
-                            .overlay {
-                                if !editIsValid {
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .stroke(.red, lineWidth: 1)
-                                }
-                            }
+                    
+                    DetailRow(label: "Pages Read") {
+                        Text("\(record.pages)").foregroundStyle(.secondary)
                     }
-
-                    if !editIsValid {
-                        Text(
-                            "Enter a page between \(record.startingPage) and \(book?.pageCount ?? record.lastPage)."
-                        )
-                        .font(.footnote)
-                        .foregroundStyle(.red)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                } else {
-                    DetailRow(label: "Duration") {
-                        Text("\(record.minutes) min").foregroundStyle(
-                            .secondary
-                        )
-                    }
-
+                    
                     Divider()
-
-                    DetailRow(label: "Last Page") {
-                        Text("\(record.lastPage)").foregroundStyle(.secondary)
+                    
+                    DetailRow(label: "Weather") {
+                        Text(record.weather).foregroundStyle(.secondary)
                     }
                 }
-
-                Divider()
-
-                DetailRow(label: "Pages Read") {
-                    Text("\(record.pages)").foregroundStyle(.secondary)
+                .padding()
+                .appCard()
+                
+                Spacer()
+                
+                Button("Delete Session", role: .destructive) {
+                    confirmingDelete = true
                 }
-
-                Divider()
-
-                DetailRow(label: "Weather") {
-                    Text(record.weather).foregroundStyle(.secondary)
-                }
+                .frame(maxWidth: .infinity)
+                .font(AppTypography.displayEyebrow)
             }
-            .padding()
-            .appCard()
-
-            Spacer()
-
-            Button("Delete Session", role: .destructive) {
-                confirmingDelete = true
-            }
-            .frame(maxWidth: .infinity)
-            .font(AppTypography.displaySection)
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)

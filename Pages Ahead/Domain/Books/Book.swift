@@ -20,5 +20,5 @@ struct Book: Identifiable, Hashable, Codable, Sendable {
     var catalogSource: String = "Open Library"
 
     var progress: Double { pageCount == 0 ? 0 : min(Double(currentPage) / Double(pageCount), 1) }
+    var hasPartialProgress: Bool { currentPage > 0 && currentPage < pageCount }
 }
-

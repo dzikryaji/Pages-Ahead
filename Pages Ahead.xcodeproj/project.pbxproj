@@ -18,13 +18,6 @@
 			remoteGlobalIDString = 6469B0873052692A008997FF;
 			remoteInfo = "Pages Ahead";
 		};
-		BBB00000000000000000000B /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 6469B0803052692A008997FF /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 6469B0873052692A008997FF;
-			remoteInfo = "Pages Ahead";
-		};
 		CCC00000000000000000000B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 6469B0803052692A008997FF /* Project object */;
@@ -51,7 +44,6 @@
 /* Begin PBXFileReference section */
 		6469B0883052692A008997FF /* Pages Ahead.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Pages Ahead.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		AAA000000000000000000001 /* Pages AheadTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Pages AheadTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		BBB000000000000000000001 /* Pages AheadUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Pages AheadUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		CCC000000000000000000001 /* Pages Ahead Live Activity.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Pages Ahead Live Activity.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -86,11 +78,6 @@
 			path = "Pages AheadTests";
 			sourceTree = "<group>";
 		};
-		BBB000000000000000000002 /* Pages AheadUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "Pages AheadUITests";
-			sourceTree = "<group>";
-		};
 		CCC000000000000000000002 /* Pages Ahead Live Activity */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -121,13 +108,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		BBB000000000000000000003 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		CCC000000000000000000003 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -145,7 +125,6 @@
 				DDD000000000000000000002 /* Shared */,
 				CCC000000000000000000002 /* Pages Ahead Live Activity */,
 				AAA000000000000000000002 /* Pages AheadTests */,
-				BBB000000000000000000002 /* Pages AheadUITests */,
 				6469B0893052692A008997FF /* Products */,
 			);
 			sourceTree = "<group>";
@@ -156,7 +135,6 @@
 				6469B0883052692A008997FF /* Pages Ahead.app */,
 				CCC000000000000000000001 /* Pages Ahead Live Activity.appex */,
 				AAA000000000000000000001 /* Pages AheadTests.xctest */,
-				BBB000000000000000000001 /* Pages AheadUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -210,27 +188,6 @@
 			productReference = AAA000000000000000000001 /* Pages AheadTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		BBB000000000000000000006 /* Pages AheadUITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = BBB000000000000000000007 /* Build configuration list for PBXNativeTarget "Pages AheadUITests" */;
-			buildPhases = (
-				BBB000000000000000000005 /* Sources */,
-				BBB000000000000000000003 /* Frameworks */,
-				BBB000000000000000000004 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				BBB00000000000000000000A /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				BBB000000000000000000002 /* Pages AheadUITests */,
-			);
-			name = "Pages AheadUITests";
-			productName = "Pages AheadUITests";
-			productReference = BBB000000000000000000001 /* Pages AheadUITests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
-		};
 		CCC000000000000000000006 /* Pages Ahead Live Activity */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = CCC000000000000000000007 /* Build configuration list for PBXNativeTarget "Pages Ahead Live Activity" */;
@@ -262,7 +219,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2660;
-				LastUpgradeCheck = 2660;
+				LastUpgradeCheck = 2700;
 				TargetAttributes = {
 					6469B0873052692A008997FF = {
 						CreatedOnToolsVersion = 26.6;
@@ -289,7 +246,6 @@
 				6469B0873052692A008997FF /* Pages Ahead */,
 				CCC000000000000000000006 /* Pages Ahead Live Activity */,
 				AAA000000000000000000006 /* Pages AheadTests */,
-				BBB000000000000000000006 /* Pages AheadUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -303,13 +259,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		AAA000000000000000000004 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		BBB000000000000000000004 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -340,13 +289,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		BBB000000000000000000005 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		CCC000000000000000000005 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -361,11 +303,6 @@
 			isa = PBXTargetDependency;
 			target = 6469B0873052692A008997FF /* Pages Ahead */;
 			targetProxy = AAA00000000000000000000B /* PBXContainerItemProxy */;
-		};
-		BBB00000000000000000000A /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 6469B0873052692A008997FF /* Pages Ahead */;
-			targetProxy = BBB00000000000000000000B /* PBXContainerItemProxy */;
 		};
 		CCC00000000000000000000A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -434,6 +371,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -491,6 +429,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -610,40 +549,6 @@
 			};
 			name = Release;
 		};
-		BBB000000000000000000008 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 89FT575Q4C;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.dzikryaji.Pages-AheadUITests";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = "Pages Ahead";
-			};
-			name = Debug;
-		};
-		BBB000000000000000000009 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 89FT575Q4C;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.dzikryaji.Pages-AheadUITests";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = "Pages Ahead";
-			};
-			name = Release;
-		};
 		CCC000000000000000000008 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -726,15 +631,6 @@
 			buildConfigurations = (
 				AAA000000000000000000008 /* Debug */,
 				AAA000000000000000000009 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		BBB000000000000000000007 /* Build configuration list for PBXNativeTarget "Pages AheadUITests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				BBB000000000000000000008 /* Debug */,
-				BBB000000000000000000009 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

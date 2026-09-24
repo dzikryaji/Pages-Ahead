@@ -152,7 +152,7 @@ struct BookRow: View {
                 Text(book.author)
                     .font(AppTypography.subheadline)
 
-                if book.currentPage != 0 {
+                if book.currentPage > 0 && book.currentPage < book.pageCount {
                     ProgressView(value: book.progress).tint(AppTheme.accent)
                     Text("Page \(book.currentPage) of \(book.pageCount)")
                         .font(AppTypography.caption)

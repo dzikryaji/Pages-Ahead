@@ -40,6 +40,12 @@ final class LibraryViewModel {
         loadCoverIfNeeded(for: book.id)
     }
 
+    func delete(_ book: Book) {
+        pendingCoverLoads.removeValue(forKey: book.id)?.task.cancel()
+        repository.delete(id: book.id)
+        reload()
+    }
+
     func reload() { books = repository.books() }
 
     private func loadCoverIfNeeded(for bookID: UUID) {
